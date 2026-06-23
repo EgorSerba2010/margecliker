@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>2048 Кликер-Стратегия</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- Верхняя панель управления -->
+        <div class="top-bar">
+            <div class="balance-board">
+                <div class="balance-text">Баланс: <span id="balance-value">100</span></div>
+                <div class="pps-counter">Доход: +<span id="pps-value">0</span> $/сек</div>
+            </div>
+            
+            <div class="timer-container" title="До появления новой карточки">
+                <svg class="progress-ring" width="50" height="50">
+                    <circle class="progress-ring__background" stroke="#e0e0e0" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
+                    <circle class="progress-ring__circle" id="timer-ring" stroke="#4a90e2" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
+                </svg>
+                <span class="timer-icon">⏳</span>
+            </div>
+        </div>
+        
+        <!-- Магазин карточек -->
+        <div class="shop-container">
+            <button class="shop-btn" id="buy-1-btn" onclick="buyCard(1)">Купить 1<br><span id="price-1">10</span> $</button>
+            <button class="shop-btn" id="buy-2-btn" onclick="buyCard(2)">Купить 2<br><span id="price-2">30</span> $</button>
+            <button class="shop-btn" id="buy-4-btn" onclick="buyCard(4)">Купить 4<br><span id="price-4">70</span> $</button>
+        </div>
+        
+        <!-- Игровое поле -->
+        <div id="sandbox" class="container"></div>
+
+        <!-- Нижняя панель разработчика -->
+        <div class="footer-panel">
+            <button class="reset-btn" onclick="hardResetGame()">⚙️ Сбросить весь прогресс</button>
+        </div>
+    </div>
+
+    <script src="main.js" defer></script>
+</body>
+</html>
