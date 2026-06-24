@@ -25,15 +25,55 @@
             </div>
         </div>
         
-        <!-- Магазин карточек -->
-        <div class="shop-container">
-            <button class="shop-btn" id="buy-1-btn" onclick="buyCard(1)">Купить 1<br><span id="price-1">10</span> $</button>
-            <button class="shop-btn" id="buy-2-btn" onclick="buyCard(2)">Купить 2<br><span id="price-2">30</span> $</button>
-            <button class="shop-btn" id="buy-4-btn" onclick="buyCard(4)">Купить 4<br><span id="price-4">70</span> $</button>
-        </div>
-        
         <!-- Игровое поле -->
         <div id="sandbox" class="container"></div>
+        
+        <!-- Кнопка открытия магазина -->
+        <button id="anchor" popovertarget="shop">🛒</button>
+        
+        <!-- Поповер-меню магазина -->
+        <div class="shop-container" id="shop" popover>
+            <h2 class="shop-main-title">МАГАЗИН</h2>
+            <div class="shop-list">
+                <div class="shop-item-row" id="shop-row-1">
+                    <div class="shop-item-preview val-1">1</div>
+                    <button class="shop-btn" id="buy-1-btn" onclick="buyCard(1)">Купить за <span id="price-1">10</span> $</button>
+                </div>
+                <div class="shop-item-row" id="shop-row-2">
+                    <div class="shop-item-preview val-2">2</div>
+                    <button class="shop-btn" id="buy-2-btn" onclick="buyCard(2)">Купить за <span id="price-2">50</span> $</button>
+                </div>
+                <div class="shop-item-row" id="shop-row-4">
+                    <div class="shop-item-preview val-4">4</div>
+                    <button class="shop-btn" id="buy-4-btn" onclick="buyCard(4)">Купить за <span id="price-4">200</span> $</button>
+                </div>
+                <div class="shop-item-row locked" id="shop-row-8">
+                    <div class="shop-item-preview val-8">8</div>
+                    <button class="shop-btn" id="buy-8-btn" onclick="buyCard(8)">Купить за <span id="price-8">1000</span> $</button>
+                </div>
+                <div class="shop-item-row locked" id="shop-row-16">
+                    <div class="shop-item-preview val-16">16</div>
+                    <button class="shop-btn" id="buy-16-btn" onclick="buyCard(16)">Купить за <span id="price-16">5000</span> $</button>
+                </div>
+                <div class="shop-item-row locked" id="shop-row-32">
+                    <div class="shop-item-preview val-32">32</div>
+                    <button class="shop-btn" id="buy-32-btn" onclick="buyCard(32)">Купить за <span id="price-32">2000</span> $</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Окно поздравления -->
+        <div class="unlock-popup-container" id="unlock-popup" popover>
+            <!-- Сюда добавился специальный класс для анимации перелива -->
+            <h2 class="unlock-title shiny-text">ПОЗДРАВЛЯЕМ!</h2>
+            <p class="unlock-subtitle">Вы открыли новую карточку:</p>
+            
+            <div id="unlocked-card-display" class="drag-item-preview"></div>
+            
+            <p id="shop-alert-text" class="shop-alert"></p>
+            
+            <button class="unlock-close-btn" onclick="document.getElementById('unlock-popup').hidePopover()">ОТЛИЧНО!</button>
+        </div>
 
         <!-- Нижняя панель разработчика -->
         <div class="footer-panel">

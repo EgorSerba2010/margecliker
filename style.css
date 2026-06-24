@@ -76,19 +76,130 @@ body {
     user-select: none;
 }
 
-.shop-container {
-    display: flex;
-    gap: 10px;
+/* Кнопка-иконка вызова магазина */
+#anchor {
+    font-size: 24px;
     background: #ffffff;
-    padding: 10px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.1s;
+    
+    &:active {
+        transform: scale(0.9);
+    }
+}
+
+/* === ОБНОВЛЕННЫЙ СТИЛЬ МАГАЗИНА С ПОПОВЕРОМ === */
+#shop {
+    opacity: 0;
+    gap: 15px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 360px; /* Идеальный размер для экрана телефона */
+    box-sizing: border-box;
+    transform: translateY(-20px);
+    transition: all 0.3s allow-discrete;
+    border: none;
+    flex-direction: column;
+
+    &:popover-open {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Затемнение фона за магазином, пока он открыт */
+#shop::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px); /* Плавное размытие игры */
+}
+
+@starting-style {
+    #shop:popover-open {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+/* Большой заголовок */
+.shop-main-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+/* Вертикальный список товаров */
+.shop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: 100%;
+    max-height: 280px;      /* Ограничиваем высоту (примерно на 3.5 товара) */
+    overflow-y: auto;       /* Включаем вертикальный скролл */
+    padding-right: 5px;     /* Отступ, чтобы скролл не прилипал к кнопкам */
     box-sizing: border-box;
 }
 
+/* Красивое оформление полосы скролла для Telegram */
+.shop-list::-webkit-scrollbar {
+    width: 6px;
+}
+.shop-list::-webkit-scrollbar-track {
+    background: #f1f2f6;
+    border-radius: 10px;
+}
+.shop-list::-webkit-scrollbar-thumb {
+    background: #ced6e0;
+    border-radius: 10px;
+}
+.shop-list::-webkit-scrollbar-thumb:hover {
+    background: #a4b0be;
+}
+
+/* Строчка товара (Превью слева + Кнопка справа) */
+.shop-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    gap: 15px;
+}
+
+/* Маленькая копия карточки товара */
+.shop-item-preview {
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: white;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    flex-shrink: 0; /* Чтобы круг не сжимался */
+}
+
+/* Кнопка покупки товара справа */
 .shop-btn {
-    padding: 8px 0;
+    padding: 12px 16px;
     font-size: 14px;
     font-weight: bold;
     background-color: #2ecc71;
@@ -98,11 +209,11 @@ body {
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
     text-align: center;
-    flex: 1;
+    flex-grow: 1; /* Кнопка занимает всё свободное место справа */
 }
 
 .shop-btn:hover { background-color: #27ae60; }
-.shop-btn:active { transform: scale(0.95); }
+.shop-btn:active { transform: scale(0.97); }
 .shop-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
 
 /* Десктопное поле */
@@ -205,23 +316,20 @@ body {
 
 /* Палитра */
 .val-1    { background-color: #a8dadc; color: #1d3557; }
-.val-2    { background-color: #457b9d; }
-.val-4    { background-color: #1d3557; }
-.val-8    { background-color: #e07a5f; }
-.val-16   { background-color: #f4a261; }
-.val-32   { background-color: #e76f51; }
-.val-64   { background-color: #2a9d8f; }
+.val-2    { background-color: #117da1; color: white; }
+.val-4    { background-color: #1d3557; color: white; }
+.val-8    { background-color: #e07a5f; color: white; }
+.val-16   { background-color: #f4a261; color: white; }
+.val-32   { background-color: #e76f51; color: white; }
+.val-64   { background-color: #2a9d8f; color: white; }
 .val-128  { background-color: #e9c46a; color: #1d3557; }
-.val-256  { background-color: #9b5de5; }
-.val-512  { background-color: #f15bb5; }
-.val-1024 { background-color: #00bbf9; }
+.val-256  { background-color: #9b5de5; color: white; }
+.val-512  { background-color: #f15bb5; color: white; }
+.val-1024 { background-color: #00bbf9; color: white; }
 .val-2048 { background-color: #00f5d4; color: #1d3557; }
-.val-high { background-color: #d62828; }
+.val-high { background-color: #d62828; color: white; }
 
-
-/* ======================================================== */
-/* === МОБИЛЬНАЯ АДАПТАЦИЯ (ДЛЯ ЭКРАНОВ МЕНЬШЕ 620px) === */
-/* ======================================================== */
+/* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
 @media (max-width: 620px) {
     body {
         padding: 10px;
@@ -229,14 +337,14 @@ body {
     }
 
     .game-wrapper {
-        width: 100%; /* Занимаем всю ширину экрана */
-        max-width: 360px; /* Ограничиваем, чтобы на смартфонах выглядело аккуратно */
+        width: 100%;
+        max-width: 360px;
         height: 95vh;
-        justify-content: space-between; /* Распределяем элементы по высоте, убирая пустые поля */
+        justify-content: space-between;
     }
 
     .balance-board {
-        font-size: 20px; /* Чуть уменьшаем плашку, но текст остается крупным */
+        font-size: 20px;
         padding: 8px 20px;
     }
 
@@ -244,33 +352,139 @@ body {
         font-size: 14px;
     }
 
-    .shop-container {
-        padding: 6px;
-        gap: 6px;
-    }
-
-    .shop-btn {
-        font-size: 12px;
-        padding: 6px 0;
-    }
-
-    /* Мобильное поле перестраивается по размеру экрана (вертикальное) */
     .container {
         width: 100%;
-        height: 65vh; /* Занимает большую часть экрана по вертикали */
+        height: 65vh;
         max-height: 440px;
     }
 
-    /* Мобильная карточка: чуть меньше физически, но шрифт читаемый! */
     .drag-item {
         width: 65px;
         height: 65px;
         font-size: 20px;
         border-radius: 8px;
-
-        &.dragging {opacity: 0.8;}
     }
 
     .floating-text { font-size: 16px; }
     .floating-text.passive { font-size: 13px; }
 }
+
+/* Скрываем секретные товары в магазине по умолчанию */
+.shop-item-row.locked {
+    display: none !important;
+}
+
+/* === СТИЛИ ДЛЯ ОКНА ПОЗДРАВЛЕНИЯ === */
+#unlock-popup {
+    opacity: 0;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    width: 85%;
+    max-width: 320px;
+    box-sizing: border-box;
+    transform: translateY(30px) scale(0.9);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) allow-discrete;
+    border: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    &:popover-open {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Эффект размытия и затемнения для окна поздравления */
+#unlock-popup::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+@starting-style {
+    #unlock-popup:popover-open {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+}
+
+/* Переливающийся текст заголовка */
+.unlock-title.shiny-text {
+    font-size: 26px;
+    font-weight: 900;
+    /* Создаем градиент из золотого, фиолетового и неонового цветов */
+    background: linear-gradient(90deg, #ff9f43, #ff6b6b, #9b5de5, #ff9f43);
+    background-size: 300% auto; /* Раздуваем градиент по ширине, чтобы двигать его */
+    -webkit-background-clip: text; /* Вырезаем градиент строго по форме букв */
+    -webkit-text-fill-color: transparent; /* Делаем стандартный цвет букв прозрачным */
+    margin: 0 0 5px 0;
+    letter-spacing: 1px;
+    animation: textShineEffect 3s linear infinite; /* Бесконечный цикл перелива */
+}
+
+@keyframes textShineEffect {
+    0% { background-position: 0% center; }
+    100% { background-position: 300% center; } /* Сдвигаем градиент, имитируя бегущий блик */
+}
+
+
+.unlock-subtitle {
+    font-size: 15px;
+    color: #7f8c8d;
+    margin: 0 0 20px 0;
+}
+
+/* Статичное превью карточки внутри поповера */
+.drag-item-preview {
+    width: 90px;
+    height: 90px;
+    font-size: 28px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 20px;
+    animation: popupCardPulse 1.5s infinite ease-in-out; /* Карточка будет плавно покачиваться */
+}
+
+@keyframes popupCardPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+/* Текст-предупреждение о магазине */
+.shop-alert {
+    font-size: 14px;
+    color: #27ae60;
+    font-weight: bold;
+    margin: 5px 0 20px 0;
+    line-height: 1.4;
+    animation: flashText 1s infinite alternate;
+}
+
+@keyframes flashText {
+    0% { opacity: 0.8; }
+    100% { opacity: 1; transform: scale(1.02); }
+}
+
+/* Кнопка закрытия поздравления */
+.unlock-close-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    background-color: #e67e22;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3);
+    transition: background-color 0.2s, transform 0.1s;
+}
+.unlock-close-btn:hover { background-color: #d35400; }
+.unlock-close-btn:active { transform: scale(0.97); }

@@ -10,11 +10,18 @@ const SPAWN_INTERVAL = 10000;
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
 
+// === ТВОИ НОВЫЕ СТАРТОВЫЕ ЦЕНЫ МАГАЗИНА ===
 let prices = {
     1: 10,
-    2: 30,
-    4: 70
+    2: 50,
+    4: 200,
+    8: 1000,
+    16: 5000,
+    32: 20000
 };
+
+let unlockedItems = [1, 2, 4];
+let discoveredCards = [1, 2, 4]; 
 
 let balance = 100;
 
@@ -33,6 +40,62 @@ const circleCircumference = 2 * Math.PI * circleRadius;
 timerRing.style.strokeDasharray = `${circleCircumference} ${circleCircumference}`;
 timerRing.style.strokeDashoffset = circleCircumference;
 
+function formatNumber(num) {
+    if (num < 1000) return num.toString();
+    
+    const suffixes = ["", "K", "M", "B", "T"];
+    const i = Math.floor(Math.log10(num) / 3);
+    
+    const formatted = (num / Math.pow(1000, i)).toFixed(1);
+    
+    return parseFloat(formatted) + suffixes[i];
+}
+
+function checkCardUnlocks(value) {
+    if (discoveredCards.includes(value)) return;
+    discoveredCards.push(value);
+
+    let targetToUnlock = 0;
+    let shopOpenedANewItem = false;
+
+    if (value === 64) targetToUnlock = 8;
+    if (value === 128) targetToUnlock = 16;
+    if (value === 256) targetToUnlock = 32;
+
+    if (targetToUnlock > 0 && !unlockedItems.includes(targetToUnlock)) {
+        unlockedItems.push(targetToUnlock);
+        shopOpenedANewItem = true;
+        
+        const row = document.getElementById(`shop-row-${targetToUnlock}`);
+        if (row) row.classList.remove('locked');
+    }
+
+    const popup = document.getElementById('unlock-popup');
+    const cardDisplay = document.getElementById('unlocked-card-display');
+    const alertText = document.getElementById('shop-alert-text');
+
+    if (popup && cardDisplay && alertText) {
+        cardDisplay.textContent = formatNumber(value); 
+        updateCardColorClass(cardDisplay, value);
+
+        if (shopOpenedANewItem) {
+            alertText.innerHTML = `🏪 Проверьте новые товары<br>в магазине!`;
+            alertText.style.display = 'block';
+        } else {
+            alertText.style.display = 'none';
+        }
+
+        popup.showPopover();
+    }
+}
+
+function refreshShopVisibility() {
+    unlockedItems.forEach(val => {
+        const row = document.getElementById(`shop-row-${val}`);
+        if (row) row.classList.remove('locked');
+    });
+}
+
 function saveGame() {
     const cardsData = [];
     const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
@@ -45,7 +108,13 @@ function saveGame() {
         });
     });
 
-    const gameState = { balance: balance, prices: prices, cards: cardsData };
+    const gameState = { 
+        balance: balance, 
+        prices: prices, 
+        cards: cardsData,
+        unlockedItems: unlockedItems,
+        discoveredCards: discoveredCards
+    };
     localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
 }
 
@@ -55,12 +124,18 @@ function loadGame() {
         try {
             const gameState = JSON.parse(savedData);
             balance = gameState.balance;
-            balanceValueEl.textContent = balance;
+            balanceValueEl.textContent = formatNumber(balance);
             prices = gameState.prices;
             
-            [1, 2, 4].forEach(val => {
-                document.getElementById(`price-${val}`).textContent = prices[val];
+            if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
+            if (gameState.discoveredCards) discoveredCards = gameState.discoveredCards;
+            
+            Object.keys(prices).forEach(val => {
+                const priceEl = document.getElementById(`price-${val}`);
+                if (priceEl) priceEl.textContent = formatNumber(prices[val]);
             });
+
+            refreshShopVisibility();
 
             sandbox.innerHTML = '';
             gameState.cards.forEach(cardInfo => {
@@ -100,7 +175,7 @@ function spawnFloatingText(text, leftStyle, topStyle, isPassive = false) {
     const fText = document.createElement('div');
     fText.className = 'floating-text' + (isPassive ? ' passive' : '');
     fText.textContent = text;
-    fText.style.left = `calc(${leftStyle} + 15px)`;
+    fText.style.left = `calc(${leftStyle} + 12px)`;
     fText.style.top = `calc(${topStyle} - 10px)`;
     sandbox.appendChild(fText);
     setTimeout(() => { fText.remove(); }, isPassive ? 1200 : 800);
@@ -111,7 +186,7 @@ function calculatePPS() {
     let totalValue = 0;
     activeCards.forEach(card => { totalValue += Number(card.getAttribute('data-value')); });
     const pps = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
-    ppsValueEl.textContent = Number(pps.toFixed(1));
+    ppsValueEl.textContent = formatNumber(Number(pps.toFixed(1)));
 }
 
 function collectPassiveIncome() {
@@ -121,7 +196,7 @@ function collectPassiveIncome() {
     activeCards.forEach(card => {
         const cardValue = Number(card.getAttribute('data-value'));
         totalPassiveTurn += cardValue;
-        spawnFloatingText(`+${cardValue}`, card.style.left, card.style.top, true);
+        spawnFloatingText(`+${formatNumber(cardValue)}`, card.style.left, card.style.top, true);
     });
 
     if (totalPassiveTurn > 0) {
@@ -136,7 +211,7 @@ function updateCardColorClass(cardElement, value) {
         .filter(c => !c.startsWith('val-'))
         .join(' ');
 
-    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128];
     if (knownValues.includes(value)) {
         cardElement.classList.add(`val-${value}`);
     } else {
@@ -146,21 +221,18 @@ function updateCardColorClass(cardElement, value) {
 
 function updateBalance(amount) {
     balance += amount;
-    balanceValueEl.textContent = balance;
+    balanceValueEl.textContent = formatNumber(balance);
     checkShopButtons();
 }
 
 function checkShopButtons() {
-    [1, 2, 4].forEach(val => {
+    Object.keys(prices).forEach(val => {
         const btn = document.getElementById(`buy-${val}-btn`);
         if (btn) btn.disabled = balance < prices[val];
     });
 }
 
-function getRandomPercent(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
+function getRandomPercent(min, max) { return Math.random() * (max - min) + min; }
 function getRandomSpawnValue() {
     const rand = Math.random();
     if (rand < 0.5) return 1;       
@@ -182,7 +254,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     item.className = 'drag-item drop-zone';
     item.setAttribute('draggable', 'true');
     item.setAttribute('data-value', value);
-    item.textContent = value;
+    item.textContent = value; 
 
     updateCardColorClass(item, value);
     
@@ -194,56 +266,44 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     item.style.left = customLeft ? customLeft : `${getRandomPercent(5, 75)}%`;
     item.style.top = customTop ? customTop : `${getRandomPercent(5, 80)}%`;
 
-    // Переменные для отслеживания тачей и скролла
     let isMoving = false;
     let touchStartTime = 0;
 
-    // === 📱 МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ ===
+    // === МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ ===
 
     item.addEventListener('touchstart', (e) => {
-        // Блокируем стандартный скролл страницы пальцем, когда мы зажали карточку
         e.preventDefault(); 
-        
         const touch = e.touches[0];
         const rect = item.getBoundingClientRect();
-        
         offsetX = touch.clientX - rect.left;
         offsetY = touch.clientY - rect.top;
-        
         touchStartTime = Date.now();
         isMoving = false;
-        
         item.classList.add('dragging');
     }, { passive: false });
 
     item.addEventListener('touchmove', (e) => {
         e.preventDefault();
         isMoving = true;
-        
         const touch = e.touches[0];
         const containerRect = sandbox.getBoundingClientRect();
         
-        // Считаем координаты пальца относительно белого игрового поля
         let newLeft = touch.clientX - containerRect.left - offsetX;
         let newTop = touch.clientY - containerRect.top - offsetY;
         
         const maxLeft = sandbox.clientWidth - item.offsetWidth;
         const maxTop = sandbox.clientHeight - item.offsetHeight;
         
-        // Ограничители краев
         if (newLeft < 0) newLeft = 0;
         if (newTop < 0) newTop = 0;
         if (newLeft > maxLeft) newLeft = maxLeft;
         if (newTop > maxTop) newTop = maxTop;
         
-        // Переводим в проценты для лучшей адаптации
-        item.style.left = `${(newLeft / sandbox.clientWidth) * 100}%`;
-        item.style.top = `${(newTop / sandbox.clientHeight) * 100}%`;
+        item.style.left = `${newLeft}px`;
+        item.style.top = `${newTop}px`;
         
-        // Очищаем старые ховеры у других элементов перед проверкой нового наведения
         document.querySelectorAll('.drag-item').forEach(c => c.classList.remove('hovered'));
         
-        // Умная проверка: проверяем, находится ли палец над другой карточкой
         const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
         if (elementUnderTouch && elementUnderTouch.classList.contains('drag-item') && elementUnderTouch !== item) {
             elementUnderTouch.classList.add('hovered');
@@ -254,41 +314,43 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         item.classList.remove('dragging');
         const touchDuration = Date.now() - touchStartTime;
         
-        // КЛИК: Если палец зажали и отпустили быстрее чем за 250мс и карточка почти не двигалась
         if (touchDuration < 250 && !isMoving) {
             const cardValue = Number(item.getAttribute('data-value'));
             updateBalance(cardValue);
-            spawnFloatingText(`+${cardValue} $`, item.style.left, item.style.top);
+            spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
             
             mergeSound.currentTime = 0;
             mergeSound.play().catch(err => console.log(err));
             
-            // Запускаем упругий джим и выходим
             item.classList.add('click-anim');
             setTimeout(() => { item.classList.remove('click-anim'); }, 150);
             saveGame();
             return;
         }
         
-        // ПЕРЕМЕЩЕНИЕ/СЛИЯНИЕ: Если мы двигали карточку, ищем куда её бросили
         const changedTouch = e.changedTouches[0];
-        // Временно скрываем текущую карточку, чтобы функция elementFromPoint увидела то, что ПОД НЕЙ
+        const currentLeftPx = parseFloat(item.style.left);
+        const currentTopPx = parseFloat(item.style.top);
+        const leftPercent = (currentLeftPx / sandbox.clientWidth) * 100;
+        const topPercent = (currentTopPx / sandbox.clientHeight) * 100;
+        
+        item.style.left = `${leftPercent}%`;
+        item.style.top = `${topPercent}%`;
+        
         item.style.display = 'none';
         const targetElement = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
-        item.style.display = 'flex'; // Возвращаем видимость назад
+        item.style.display = 'flex'; 
         
-        // Если бросили на другую карточку с таким же текстом (номиналом)
         if (targetElement && targetElement.classList.contains('drag-item') && targetElement !== item && targetElement.textContent === item.textContent) {
             targetElement.classList.remove('hovered');
-            handleCardsMerge(targetElement, item); // Объединяем
+            handleCardsMerge(targetElement, item); 
         } else {
-            // Если бросили просто на поле — убираем подсветку со всех карточек и сохраняем координаты
             document.querySelectorAll('.drag-item').forEach(c => c.classList.remove('hovered'));
             saveGame();
         }
     });
 
-    // === 💻 ДЕСКТОПНЫЕ СОБЫТИЯ МЫШИ (ДЛЯ ПК) ===
+    // === ДЕСКТОПНЫЕ СОБЫТИЯ МЫШИ (ПК) ===
 
     item.addEventListener('mousedown', (e) => {
         const rect = item.getBoundingClientRect();
@@ -302,7 +364,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
 
         const cardValue = Number(item.getAttribute('data-value'));
         updateBalance(cardValue);
-        spawnFloatingText(`+${cardValue} $`, item.style.left, item.style.top);
+        spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
 
         mergeSound.currentTime = 0;
         mergeSound.play().catch(err => console.log(err));
@@ -343,7 +405,6 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     return true;
 }
 
-// Универсальная функция логики слияния карточек (вызывается и для ПК, и для Смартфонов)
 function handleCardsMerge(targetCard, sourceCard) {
     const value1 = Number(targetCard.getAttribute('data-value'));
     const value2 = Number(sourceCard.getAttribute('data-value'));
@@ -362,9 +423,11 @@ function handleCardsMerge(targetCard, sourceCard) {
     targetCard.setAttribute('data-value', totalSum);
     targetCard.textContent = totalSum;
 
+    checkCardUnlocks(totalSum);
+
     const mergeBonus = totalSum * 5;
     updateBalance(mergeBonus);
-    spawnFloatingText(`+${mergeBonus} $`, targetCard.style.left, targetCard.style.top);
+    spawnFloatingText(`+${formatNumber(mergeBonus)} $`, targetCard.style.left, targetCard.style.top);
 
     mergeSound.currentTime = 0;
     mergeSound.play().catch(error => console.log(error));
@@ -384,7 +447,10 @@ function handleCardsMerge(targetCard, sourceCard) {
 function autoSpawn() {
     const value = getRandomSpawnValue();
     const success = createCard(value);
-    if (success) saveGame(); 
+    if (success) {
+        checkCardUnlocks(value);
+        saveGame(); 
+    }
 }
 
 function buyCard(value) {
@@ -394,13 +460,12 @@ function buyCard(value) {
         if (success) {
             updateBalance(-currentPrice);
             prices[value] = Math.round(currentPrice * 1.15);
-            document.getElementById(`price-${value}`).textContent = prices[value];
+            document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
             saveGame(); 
         }
     }
 }
 
-// === СВОБОДНОЕ ПЕРЕМЕЩЕНИЕ МЫШИ (ПК) ===
 sandbox.addEventListener('dragover', (e) => { e.preventDefault(); });
 sandbox.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -431,8 +496,12 @@ sandbox.addEventListener('drop', (e) => {
 });
 
 // === ЗАПУСК ИГРЫ ===
-checkShopButtons();
+refreshShopVisibility();
+
 const loaded = loadGame();
-if (!loaded) autoSpawn()
+if (!loaded) {
+    autoSpawn();
+}
+
 setInterval(updateTimerIndicator, timerStep);
 setInterval(collectPassiveIncome, PASSIVE_INCOME_INTERVAL);
