@@ -101,7 +101,6 @@ function checkCardUnlocks(value) {
     }
 }
 
-
 // Функция автоматического лечения и включения кнопок при загрузке старых сейвов
 function refreshShopVisibility() {
     unlockedItems.forEach(val => {
@@ -262,6 +261,59 @@ function getRandomSpawnValue() {
     if (rand < 0.8) return 2;       
     return 4;                       
 }
+
+// === СЕКРЕТНАЯ ПАНЕЛЬ РАЗРАБОТЧИКА (ЧИТ-КОД ДЛЯ БРАТА) ===
+let balanceClicks = 0;
+let lastBalanceClickTime = 0;
+
+// Находим плашку баланса в HTML
+const balanceBoardElement = document.querySelector('.balance-board');
+
+if (balanceBoardElement) {
+    balanceBoardElement.addEventListener('click', () => {
+        const currentTime = Date.now();
+        
+        // Если между кликами прошло меньше 400мс, считаем их серией
+        if (currentTime - lastBalanceClickTime < 400) {
+            balanceClicks++;
+        } else {
+            balanceClicks = 1; // Сброс, если игрок кликает медленно
+        }
+        
+        lastBalanceClickTime = currentTime;
+
+        // Если кликнули быстро 5 раз подряд
+        if (balanceClicks === 5) {
+            balanceClicks = 0; // Сброс счетчика
+            
+            // Запускаем красивое системное окно Telegram
+            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый забагавшийся сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $. Продолжить?")) {
+                
+                // 1. Полностью очищаем старый кривой localStorage
+                localStorage.removeItem('clicker_game_save');
+                
+                // 2. Создаем структуру АБСОЛЮТНО ЧИСТОГО и здорового сейва
+                const freshState = {
+                    balance: 20000000, // Жирная компенсация!
+                    prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000 },
+                    cards: [
+                        { value: 4, left: "20%", top: "30%" },
+                        { value: 4, left: "60%", top: "40%" } // Дарим ему пару четверок для быстрого старта
+                    ],
+                    unlockedItems: [1, 2, 4],
+                    discoveredCards: [1, 2, 4]
+                };
+                
+                // 3. Записываем этот идеальный сейв в память телефона
+                localStorage.setItem('clicker_game_save', JSON.stringify(freshState));
+                
+                // 4. Перезагружаем игру, чтобы применился новый баланс и карточки
+                location.reload();
+            }
+        }
+    });
+}
+
 
 
 
