@@ -61,6 +61,9 @@ function checkCardUnlocks(value) {
     if (value === 64) targetToUnlock = 8;
     if (value === 128) targetToUnlock = 16;
     if (value === 256) targetToUnlock = 32;
+    if (value === 512) targetToUnlock = 64;
+    if (value === 1024) targetToUnlock = 128;
+    if (value === 2048) targetToUnlock = 256;
 
     if (targetToUnlock > 0 && !unlockedItems.includes(targetToUnlock)) {
         unlockedItems.push(targetToUnlock);
@@ -211,7 +214,7 @@ function updateCardColorClass(cardElement, value) {
         .filter(c => !c.startsWith('val-'))
         .join(' ');
 
-    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128];
+    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
     if (knownValues.includes(value)) {
         cardElement.classList.add(`val-${value}`);
     } else {
