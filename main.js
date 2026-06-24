@@ -102,10 +102,20 @@ function checkCardUnlocks(value) {
 }
 
 
+// Функция автоматического лечения и включения кнопок при загрузке старых сейвов
 function refreshShopVisibility() {
     unlockedItems.forEach(val => {
         const row = document.getElementById(`shop-row-${val}`);
-        if (row) row.classList.remove('locked');
+        if (row) {
+            row.classList.remove('locked'); // Показываем строку
+            
+            // ЛЕЧЕНИЕ СЕЙВА: Принудительно проверяем баланс и оживляем кнопку,
+            // чтобы игрокам не приходилось сбрасывать свой прогресс!
+            const btn = document.getElementById(`buy-${val}-btn`);
+            if (btn) {
+                btn.disabled = balance < prices[val];
+            }
+        }
     });
 }
 
