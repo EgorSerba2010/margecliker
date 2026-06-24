@@ -64,6 +64,7 @@ function checkCardUnlocks(value) {
     if (value === 512) targetToUnlock = 64;
     if (value === 1024) targetToUnlock = 128;
     if (value === 2048) targetToUnlock = 256;
+    if (value === 4096) targetToUnlock = 512;
 
     if (targetToUnlock > 0 && !unlockedItems.includes(targetToUnlock)) {
         unlockedItems.push(targetToUnlock);
