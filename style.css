@@ -311,7 +311,7 @@ body {
     100% { transform: translateY(-35px); opacity: 0; }
 }
 
-.drag-item.dragging { opacity: 0.4; cursor: grabbing; }
+.drag-item.dragging { opacity: 0.9; cursor: grabbing; }
 .drag-item.hovered { border-color: #ff9800; transform: scale(1.08) !important; z-index: 10; }
 
 /* Палитра */

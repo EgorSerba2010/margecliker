@@ -70,7 +70,16 @@ function checkCardUnlocks(value) {
         shopOpenedANewItem = true;
         
         const row = document.getElementById(`shop-row-${targetToUnlock}`);
-        if (row) row.classList.remove('locked');
+        if (row) {
+            row.classList.remove('locked');
+            
+            // ФИКС: Принудительно проверяем баланс для свежеоткрытой кнопки,
+            // чтобы мобильный браузер активировал её для кликов
+            const btn = document.getElementById(`buy-${targetToUnlock}-btn`);
+            if (btn) {
+                btn.disabled = balance < prices[targetToUnlock];
+            }
+        }
     }
 
     const popup = document.getElementById('unlock-popup');
@@ -91,6 +100,7 @@ function checkCardUnlocks(value) {
         popup.showPopover();
     }
 }
+
 
 function refreshShopVisibility() {
     unlockedItems.forEach(val => {
@@ -466,6 +476,9 @@ function buyCard(value) {
             updateBalance(-currentPrice);
             prices[value] = Math.round(currentPrice * 1.15);
             document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
+            
+            // ФИКС: Пересчитываем состояние кнопок сразу после покупки
+            checkShopButtons(); 
             saveGame(); 
         }
     }
