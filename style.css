@@ -327,6 +327,7 @@ body {
 .val-512  { background-color: #f15bb5; color: white; }
 .val-1024 { background-color: #00bbf9; color: white; }
 .val-2048 { background-color: #00f5d4; color: #1d3557; }
+.val-4096 { background-image: linear-gradient(180deg, red, yellow, green, cyan, purple); color: #1d3557; }
 .val-high { background-color: #d62828; color: white; }
 
 /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
