@@ -275,7 +275,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     // === МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ ===
 
     item.addEventListener('touchstart', (e) => {
-        e.preventDefault(); 
+        // УБРАЛИ e.preventDefault(), чтобы не блокировать интерфейсы смартфона и поповеры!
         const touch = e.touches[0];
         const rect = item.getBoundingClientRect();
         offsetX = touch.clientX - rect.left;
@@ -283,11 +283,13 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         touchStartTime = Date.now();
         isMoving = false;
         item.classList.add('dragging');
-    }, { passive: false });
+    }, { passive: true }); // passive: true разрешает браузеру обрабатывать клики без задержек
 
     item.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+        // Блокируем скролл шторки Telegram только ТОГДА, когда карточка РЕАЛЬНО двигается
+        if (e.cancelable) e.preventDefault(); 
         isMoving = true;
+        
         const touch = e.touches[0];
         const containerRect = sandbox.getBoundingClientRect();
         
@@ -311,7 +313,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         if (elementUnderTouch && elementUnderTouch.classList.contains('drag-item') && elementUnderTouch !== item) {
             elementUnderTouch.classList.add('hovered');
         }
-    }, { passive: false });
+    }, { passive: false }); // Тут passive: false обязателен, чтобы работал preventDefault скролла
 
     item.addEventListener('touchend', (e) => {
         item.classList.remove('dragging');
