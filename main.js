@@ -9,15 +9,19 @@ const mergeSound = new Audio('click.mp3');
 const SPAWN_INTERVAL = 10000; 
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
+const MAX_OFFLINE_TIME = 3600; // Максимальное время оффлайн-дохода в секундах (1 час)
 
-// === ТВОИ НОВЫЕ СТАРТОВЫЕ ЦЕНЫ МАГАЗИНА ===
 let prices = {
     1: 10,
     2: 50,
     4: 200,
     8: 1000,
     16: 5000,
-    32: 20000
+    32: 20000,
+    64: 100000,
+    128: 500000,
+    256: 2000000,
+    512: 10000000,
 };
 
 let unlockedItems = [1, 2, 4];
@@ -42,13 +46,21 @@ timerRing.style.strokeDashoffset = circleCircumference;
 
 function formatNumber(num) {
     if (num < 1000) return num.toString();
-    
     const suffixes = ["", "K", "M", "B", "T"];
     const i = Math.floor(Math.log10(num) / 3);
-    
     const formatted = (num / Math.pow(1000, i)).toFixed(1);
-    
     return parseFloat(formatted) + suffixes[i];
+}
+
+// Вспомогательная функция для красивого перевода секунд в текст (мин/сек/час)
+function formatOfflineTime(seconds) {
+    if (seconds < 60) return `${seconds} сек`;
+    const minutes = Math.floor(seconds / 60);
+    const remSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes} мин ${remSeconds} сек`;
+    const hours = Math.floor(minutes / 60);
+    const remMinutes = minutes % 60;
+    return `${hours} ч ${remMinutes} мин`;
 }
 
 function checkCardUnlocks(value) {
@@ -73,13 +85,8 @@ function checkCardUnlocks(value) {
         const row = document.getElementById(`shop-row-${targetToUnlock}`);
         if (row) {
             row.classList.remove('locked');
-            
-            // ФИКС: Принудительно проверяем баланс для свежеоткрытой кнопки,
-            // чтобы мобильный браузер активировал её для кликов
             const btn = document.getElementById(`buy-${targetToUnlock}-btn`);
-            if (btn) {
-                btn.disabled = balance < prices[targetToUnlock];
-            }
+            if (btn) btn.disabled = balance < prices[targetToUnlock];
         }
     }
 
@@ -97,24 +104,17 @@ function checkCardUnlocks(value) {
         } else {
             alertText.style.display = 'none';
         }
-
         popup.showPopover();
     }
 }
 
-// Функция автоматического лечения и включения кнопок при загрузке старых сейвов
 function refreshShopVisibility() {
     unlockedItems.forEach(val => {
         const row = document.getElementById(`shop-row-${val}`);
         if (row) {
-            row.classList.remove('locked'); // Показываем строку
-            
-            // ЛЕЧЕНИЕ СЕЙВА: Принудительно проверяем баланс и оживляем кнопку,
-            // чтобы игрокам не приходилось сбрасывать свой прогресс!
+            row.classList.remove('locked');
             const btn = document.getElementById(`buy-${val}-btn`);
-            if (btn) {
-                btn.disabled = balance < prices[val];
-            }
+            if (btn) btn.disabled = balance < prices[val];
         }
     });
 }
@@ -136,7 +136,8 @@ function saveGame() {
         prices: prices, 
         cards: cardsData,
         unlockedItems: unlockedItems,
-        discoveredCards: discoveredCards
+        discoveredCards: discoveredCards,
+        lastSaveTime: Date.now() // ЗАПОМИНАЕМ ВРЕМЯ ВЫХОДА/СОХРАНЕНИЯ ИГРЫ
     };
     localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
 }
@@ -147,7 +148,6 @@ function loadGame() {
         try {
             const gameState = JSON.parse(savedData);
             balance = gameState.balance;
-            balanceValueEl.textContent = formatNumber(balance);
             prices = gameState.prices;
             
             if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
@@ -167,6 +167,53 @@ function loadGame() {
             
             calculatePPS();
             checkShopButtons();
+
+            // РАСЧЕТ ОФФЛАЙН ДОХОДА ПРИ ЗАГРУЗКЕ
+            if (gameState.lastSaveTime) {
+                const timeDiffMs = Date.now() - gameState.lastSaveTime;
+                let secondsPassed = Math.floor(timeDiffMs / 1000);
+
+                // Начисляем оффлайн доход только если игрока не было дольше 10 секунд
+                if (secondsPassed > 10) {
+                    // Считаем текущий PPS поля (сумма всех карточек / 4)
+                    let totalValue = 0;
+                    gameState.cards.forEach(c => totalValue += c.value);
+                    const currentPPS = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+
+                    if (currentPPS > 0) {
+                        let actualOfflineSeconds = secondsPassed;
+                        
+                        // Если превысили лимит в 1 час (3600 сек) — урезаем
+                        if (actualOfflineSeconds > MAX_OFFLINE_TIME) {
+                            actualOfflineSeconds = MAX_OFFLINE_TIME;
+                        }
+
+                        // Математика дохода: секунды * доход в секунду
+                        const offlineEarnings = Math.round(actualOfflineSeconds * currentPPS);
+
+                        if (offlineEarnings > 0) {
+                            // Прибавляем награду к балансу
+                            balance += offlineEarnings;
+                            
+                            // Вызываем поповер оффлайн дохода
+                            const offlinePopup = document.getElementById('offline-popup');
+                            const timeText = document.getElementById('offline-time-text');
+                            const rewardValue = document.getElementById('offline-reward-value');
+
+                            if (offlinePopup && timeText && rewardValue) {
+                                timeText.textContent = `Вас не было в игре: ${formatOfflineTime(secondsPassed)}` + 
+                                    (secondsPassed > MAX_OFFLINE_TIME ? ' (MAX 1 час)' : '');
+                                rewardValue.textContent = formatNumber(offlineEarnings);
+                                
+                                // Открываем поповер нативно
+                                setTimeout(() => offlinePopup.showPopover(), 500); // Небольшая задержка для плавности
+                            }
+                        }
+                    }
+                }
+            }
+
+            balanceValueEl.textContent = formatNumber(balance);
             return true;
         } catch (e) {
             console.error(e);
@@ -234,7 +281,7 @@ function updateCardColorClass(cardElement, value) {
         .filter(c => !c.startsWith('val-'))
         .join(' ');
 
-    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
     if (knownValues.includes(value)) {
         cardElement.classList.add(`val-${value}`);
     } else {
@@ -266,54 +313,40 @@ function getRandomSpawnValue() {
 // === СЕКРЕТНАЯ ПАНЕЛЬ РАЗРАБОТЧИКА (ЧИТ-КОД ДЛЯ БРАТА) ===
 let balanceClicks = 0;
 let lastBalanceClickTime = 0;
-
-// Находим плашку баланса в HTML
 const balanceBoardElement = document.querySelector('.balance-board');
 
 if (balanceBoardElement) {
     balanceBoardElement.addEventListener('click', () => {
         const currentTime = Date.now();
-        
-        // Если между кликами прошло меньше 400мс, считаем их серией
         if (currentTime - lastBalanceClickTime < 400) {
             balanceClicks++;
         } else {
-            balanceClicks = 1; // Сброс, если игрок кликает медленно
+            balanceClicks = 1;
         }
-        
         lastBalanceClickTime = currentTime;
 
-        // Если кликнули быстро 5 раз подряд
         if (balanceClicks === 5) {
-            balanceClicks = 0; // Сброс счетчика
-            
-            // Запускаем красивое системное окно Telegram
+            balanceClicks = 0;
             if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый забагавшийся сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $. Продолжить?")) {
-                
-                // 1. Полностью очищаем старый кривой localStorage
                 localStorage.removeItem('clicker_game_save');
-                
-                // 2. Создаем структуру АБСОЛЮТНО ЧИСТОГО и здорового сейва
                 const freshState = {
-                    balance: 20000000, // Жирная компенсация!
-                    prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000 },
+                    balance: 20000000,
+                    prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
                     cards: [
                         { value: 4, left: "20%", top: "30%" },
-                        { value: 4, left: "60%", top: "40%" } // Дарим ему пару четверок для быстрого старта
+                        { value: 4, left: "60%", top: "40%" }
                     ],
                     unlockedItems: [1, 2, 4],
-                    discoveredCards: [1, 2, 4]
+                    discoveredCards: [1, 2, 4],
+                    lastSaveTime: Date.now()
                 };
-                
-                // 3. Записываем этот идеальный сейв в память телефона
                 localStorage.setItem('clicker_game_save', JSON.stringify(freshState));
-                
-                // 4. Перезагружаем игру, чтобы применился новый баланс и карточки
                 location.reload();
             }
         }
     });
 }
+
 
 
 

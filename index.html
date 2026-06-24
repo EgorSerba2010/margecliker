@@ -92,6 +92,23 @@
             <button class="unlock-close-btn" onclick="document.getElementById('unlock-popup').hidePopover()">ОТЛИЧНО!</button>
         </div>
 
+                <!-- ОКНО ОФФЛАЙН ДОХОДА (ПОПОВЕР) -->
+        <div class="offline-popup-container" id="shop" popover style="display: none;"></div> <!-- костыль для стилей, реальный ниже -->
+        
+        <div class="unlock-popup-container" id="offline-popup" popover>
+            <h2 class="unlock-title shiny-text">С ВОЗВРАЩЕНИЕМ!</h2>
+            <p class="unlock-subtitle" id="offline-time-text">Вас не было в игре: 0 сек</p>
+            
+            <!-- Иконка сундука с золотом -->
+            <div class="offline-gold-icon">💰</div>
+            
+            <p class="offline-reward-text">Вы заработали пассивно:</p>
+            <h3 class="offline-reward-value">+<span id="offline-reward-value">0</span> $</h3>
+            
+            <button class="unlock-close-btn" onclick="document.getElementById('offline-popup').hidePopover()">ЗАБРАТЬ НАГРАДУ!</button>
+        </div>
+
+
         <!-- Нижняя панель разработчика -->
         <div class="footer-panel">
             <button class="reset-btn" onclick="hardResetGame()">⚙️ Сбросить весь прогресс</button>
