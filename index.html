@@ -11,27 +11,37 @@
     <div class="game-wrapper">
         <!-- Верхняя панель управления -->
         <div class="top-bar">
+            <!-- Левая часть: только баланс денег и пассивный доход -->
             <div class="balance-board">
                 <div class="balance-text">Баланс: <span id="balance-value">100</span></div>
                 <div class="pps-counter">Доход: +<span id="pps-value">0</span> $/сек</div>
             </div>
             
-            <div class="timer-container" title="До появления новой карточки">
-                <svg class="progress-ring" width="50" height="50">
-                    <circle class="progress-ring__background" stroke="#e0e0e0" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
-                    <circle class="progress-ring__circle" id="timer-ring" stroke="#4a90e2" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
-                </svg>
-                <span class="timer-icon">⏳</span>
+            <!-- Правая часть: колонка с алмазами сверху и часами снизу -->
+            <div class="right-bar-column">
+                <div class="diamonds-counter" title="Ваши алмазы">💎 <span id="diamonds-value">0</span></div>
+                
+                <div class="timer-container" title="До появления новой карточки">
+                    <svg class="progress-ring" width="50" height="50">
+                        <circle class="progress-ring__background" stroke="#e0e0e0" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
+                        <circle class="progress-ring__circle" id="timer-ring" stroke="#4a90e2" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
+                    </svg>
+                    <span class="timer-icon">⏳</span>
+                </div>
             </div>
         </div>
         
         <!-- Игровое поле -->
         <div id="sandbox" class="container"></div>
         
-        <!-- Кнопка открытия магазина -->
-        <button id="anchor" popovertarget="shop">🛒</button>
+                <!-- Кнопки управления магазинами -->
+        <div class="shop-anchors-row">
+            <button id="anchor" popovertarget="shop">🛒</button>
+            <!-- НОВАЯ КНОПКА ДЛЯ УЛУЧШЕНИЙ -->
+            <button id="upgrades-anchor" popovertarget="upgrades-shop">💎</button>
+        </div>
         
-        <!-- Поповер-меню магазина -->
+        <!-- Поповер-меню обычного магазина -->
         <div class="shop-container" id="shop" popover>
             <h2 class="shop-main-title">МАГАЗИН</h2>
             <div class="shop-list">
@@ -75,39 +85,39 @@
                     <div class="shop-item-preview val-512">512</div>
                     <button class="shop-btn" id="buy-512-btn" onclick="buyCard(512)">Купить за <span id="price-512">10000000</span> $</button>
                 </div>
-                
             </div>
         </div>
 
-        <!-- Окно поздравления -->
-        <div class="unlock-popup-container" id="unlock-popup" popover>
-            <!-- Сюда добавился специальный класс для анимации перелива -->
-            <h2 class="unlock-title shiny-text">ПОЗДРАВЛЯЕМ!</h2>
-            <p class="unlock-subtitle">Вы открыли новую карточку:</p>
-            
-            <div id="unlocked-card-display" class="drag-item-preview"></div>
-            
-            <p id="shop-alert-text" class="shop-alert"></p>
-            
-            <button class="unlock-close-btn" onclick="document.getElementById('unlock-popup').hidePopover()">ОТЛИЧНО!</button>
+        <!-- НОВОЕ ПОПОВЕР-МЕНЮ УЛУЧШЕНИЙ -->
+        <div class="shop-container" id="upgrades-shop" popover>
+            <h2 class="shop-main-title">УЛУЧШЕНИЯ</h2>
+            <div class="shop-list">
+                <!-- Буст 1: Оффлайн таймер -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Сон инвестора</span>
+                        <span class="upgrade-desc">Макс. оффлайн время: +30 мин</span>
+                        <span class="upgrade-level">Ур. <span id="boost-offline-lvl">0</span></span>
+                    </div>
+                    <button class="upgrade-btn" id="buy-boost-offline-btn" onclick="buyUpgrade('offline')">
+                        <span id="price-boost-offline">2</span> 💎
+                    </button>
+                </div>
+                
+                <!-- Сюда в будущем сможем добавлять новые бусты -->
+            </div>
         </div>
 
-                <!-- ОКНО ОФФЛАЙН ДОХОДА (ПОПОВЕР) -->
-        <div class="offline-popup-container" id="shop" popover style="display: none;"></div> <!-- костыль для стилей, реальный ниже -->
-        
+
+        <!-- Окно оффлайн дохода -->
         <div class="unlock-popup-container" id="offline-popup" popover>
             <h2 class="unlock-title shiny-text">С ВОЗВРАЩЕНИЕМ!</h2>
             <p class="unlock-subtitle" id="offline-time-text">Вас не было в игре: 0 сек</p>
-            
-            <!-- Иконка сундука с золотом -->
             <div class="offline-gold-icon">💰</div>
-            
             <p class="offline-reward-text">Вы заработали пассивно:</p>
             <h3 class="offline-reward-value">+<span id="offline-reward-value">0</span> $</h3>
-            
             <button class="unlock-close-btn" onclick="document.getElementById('offline-popup').hidePopover()">ЗАБРАТЬ НАГРАДУ!</button>
         </div>
-
 
         <!-- Нижняя панель разработчика -->
         <div class="footer-panel">

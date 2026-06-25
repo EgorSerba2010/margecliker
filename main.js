@@ -2,6 +2,7 @@ const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
 const ppsValueEl = document.getElementById('pps-value');
 const timerRing = document.getElementById('timer-ring');
+const diamondsValueEl = document.getElementById('diamonds-value');
 
 const mergeSound = new Audio('click.mp3');
 
@@ -9,7 +10,7 @@ const mergeSound = new Audio('click.mp3');
 const SPAWN_INTERVAL = 10000; 
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
-const MAX_OFFLINE_TIME = 3600; // Максимальное время оффлайн-дохода в секундах (1 час)
+const BASE_MAX_OFFLINE_TIME = 3600; // Базовое время оффлайна (1 час)
 
 let prices = {
     1: 10,
@@ -24,10 +25,19 @@ let prices = {
     512: 10000000,
 };
 
+// === ДАННЫЕ УЛУЧШЕНИЙ ЗА АЛМАЗЫ ===
+let upgrades = {
+    offline: {
+        level: 0,
+        price: 2 // Стартовая цена в алмазах
+    }
+};
+
 let unlockedItems = [1, 2, 4];
 let discoveredCards = [1, 2, 4]; 
 
 let balance = 100;
+let diamonds = 0;
 
 // Переменные для Drag and Drop / Touch
 let offsetX = 0;
@@ -52,7 +62,6 @@ function formatNumber(num) {
     return parseFloat(formatted) + suffixes[i];
 }
 
-// Вспомогательная функция для красивого перевода секунд в текст (мин/сек/час)
 function formatOfflineTime(seconds) {
     if (seconds < 60) return `${seconds} сек`;
     const minutes = Math.floor(seconds / 60);
@@ -93,10 +102,16 @@ function checkCardUnlocks(value) {
     const popup = document.getElementById('unlock-popup');
     const cardDisplay = document.getElementById('unlocked-card-display');
     const alertText = document.getElementById('shop-alert-text');
+    const diamondsRewardValueEl = document.getElementById('diamonds-reward-value');
 
-    if (popup && cardDisplay && alertText) {
+    if (popup && cardDisplay && alertText && diamondsRewardValueEl) {
         cardDisplay.textContent = formatNumber(value); 
         updateCardColorClass(cardDisplay, value);
+
+        const diamondsEarned = value.toString().length;
+        diamonds += diamondsEarned; 
+        diamondsValueEl.textContent = formatNumber(diamonds);
+        diamondsRewardValueEl.textContent = diamondsEarned;
 
         if (shopOpenedANewItem) {
             alertText.innerHTML = `🏪 Проверьте новые товары<br>в магазине!`;
@@ -119,6 +134,39 @@ function refreshShopVisibility() {
     });
 }
 
+// Новая функция: проверка доступности фиолетовых кнопок в магазине бустов
+function checkUpgradeButtons() {
+    const btn = document.getElementById('buy-boost-offline-btn');
+    if (btn) {
+        btn.disabled = diamonds < upgrades.offline.price;
+    }
+}
+
+// Обновление текстовых данных буста на экране
+function updateUpgradeUI() {
+    const lvlEl = document.getElementById('boost-offline-lvl');
+    const priceEl = document.getElementById('price-boost-offline');
+    if (lvlEl) lvlEl.textContent = upgrades.offline.level;
+    if (priceEl) priceEl.textContent = upgrades.offline.price;
+    checkUpgradeButtons();
+}
+
+// ФУНКЦИЯ ПОКУПКИ УЛУЧШЕНИЙ ЗА АЛМАЗЫ
+function buyUpgrade(type) {
+    if (type === 'offline') {
+        const currentPrice = upgrades.offline.price;
+        if (diamonds >= currentPrice) {
+            diamonds -= currentPrice; // Списываем алмазы
+            upgrades.offline.level += 1; // Повышаем уровень
+            
+            if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
+            updateUpgradeUI();
+            checkShopButtons(); // Обычные кнопки тоже пересчитаем
+            saveGame();
+        }
+    }
+}
+
 function saveGame() {
     const cardsData = [];
     const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
@@ -133,11 +181,13 @@ function saveGame() {
 
     const gameState = { 
         balance: balance, 
+        diamonds: diamonds,
         prices: prices, 
+        upgrades: upgrades, // Сохраняем уровни бустов
         cards: cardsData,
         unlockedItems: unlockedItems,
         discoveredCards: discoveredCards,
-        lastSaveTime: Date.now() // ЗАПОМИНАЕМ ВРЕМЯ ВЫХОДА/СОХРАНЕНИЯ ИГРЫ
+        lastSaveTime: Date.now()
     };
     localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
 }
@@ -150,6 +200,16 @@ function loadGame() {
             balance = gameState.balance;
             prices = gameState.prices;
             
+            diamonds = gameState.diamonds || 0;
+            if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
+
+            // Восстанавливаем уровни апгрейдов из сохранения
+            if (gameState.upgrades) {
+                upgrades = gameState.upgrades;
+            }
+            // Сразу выводим актуальные уровни и цены бустов на экран
+            updateUpgradeUI();
+
             if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
             if (gameState.discoveredCards) discoveredCards = gameState.discoveredCards;
             
@@ -168,14 +228,12 @@ function loadGame() {
             calculatePPS();
             checkShopButtons();
 
-            // РАСЧЕТ ОФФЛАЙН ДОХОДА ПРИ ЗАГРУЗКЕ
+            // РАСЧЕТ ОФФЛАЙН ДОХОДА С УЧЕТОМ БУСТА
             if (gameState.lastSaveTime) {
                 const timeDiffMs = Date.now() - gameState.lastSaveTime;
                 let secondsPassed = Math.floor(timeDiffMs / 1000);
 
-                // Начисляем оффлайн доход только если игрока не было дольше 10 секунд
                 if (secondsPassed > 10) {
-                    // Считаем текущий PPS поля (сумма всех карточек / 4)
                     let totalValue = 0;
                     gameState.cards.forEach(c => totalValue += c.value);
                     const currentPPS = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
@@ -183,30 +241,28 @@ function loadGame() {
                     if (currentPPS > 0) {
                         let actualOfflineSeconds = secondsPassed;
                         
-                        // Если превысили лимит в 1 час (3600 сек) — урезаем
-                        if (actualOfflineSeconds > MAX_OFFLINE_TIME) {
-                            actualOfflineSeconds = MAX_OFFLINE_TIME;
+                        // ДИНАМИЧЕСКИЙ ЛИМИТ: Базовый час (3600с) + 30 минут (1800с) за каждый уровень буста
+                        const currentMaxOfflineTime = BASE_MAX_OFFLINE_TIME + (upgrades.offline.level * 1800);
+
+                        if (actualOfflineSeconds > currentMaxOfflineTime) {
+                            actualOfflineSeconds = currentMaxOfflineTime;
                         }
 
-                        // Математика дохода: секунды * доход в секунду
                         const offlineEarnings = Math.round(actualOfflineSeconds * currentPPS);
 
                         if (offlineEarnings > 0) {
-                            // Прибавляем награду к балансу
                             balance += offlineEarnings;
-                            
-                            // Вызываем поповер оффлайн дохода
                             const offlinePopup = document.getElementById('offline-popup');
                             const timeText = document.getElementById('offline-time-text');
                             const rewardValue = document.getElementById('offline-reward-value');
 
                             if (offlinePopup && timeText && rewardValue) {
+                                // Вычисляем лимит в часах для красивого текста
+                                const maxHours = (currentMaxOfflineTime / 3600).toFixed(1);
                                 timeText.textContent = `Вас не было в игре: ${formatOfflineTime(secondsPassed)}` + 
-                                    (secondsPassed > MAX_OFFLINE_TIME ? ' (MAX 1 час)' : '');
+                                    (secondsPassed > currentMaxOfflineTime ? ` (max ${parseFloat(maxHours)} ч)` : '');
                                 rewardValue.textContent = formatNumber(offlineEarnings);
-                                
-                                // Открываем поповер нативно
-                                setTimeout(() => offlinePopup.showPopover(), 500); // Небольшая задержка для плавности
+                                setTimeout(() => offlinePopup.showPopover(), 500);
                             }
                         }
                     }
@@ -293,6 +349,7 @@ function updateBalance(amount) {
     balance += amount;
     balanceValueEl.textContent = formatNumber(balance);
     checkShopButtons();
+    checkUpgradeButtons(); // Проверяем доступность фиолетовых кнопок
 }
 
 function checkShopButtons() {
@@ -310,7 +367,7 @@ function getRandomSpawnValue() {
     return 4;                       
 }
 
-// === СЕКРЕТНАЯ ПАНЕЛЬ РАЗРАБОТЧИКА (ЧИТ-КОД ДЛЯ БРАТА) ===
+// Чит-код разработчика
 let balanceClicks = 0;
 let lastBalanceClickTime = 0;
 const balanceBoardElement = document.querySelector('.balance-board');
@@ -327,11 +384,13 @@ if (balanceBoardElement) {
 
         if (balanceClicks === 5) {
             balanceClicks = 0;
-            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый забагавшийся сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $. Продолжить?")) {
+            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $ и 50 💎. Продолжить?")) {
                 localStorage.removeItem('clicker_game_save');
                 const freshState = {
                     balance: 20000000,
+                    diamonds: 10,
                     prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
+                    upgrades: { offline: { level: 0, price: 2 } },
                     cards: [
                         { value: 4, left: "20%", top: "30%" },
                         { value: 4, left: "60%", top: "40%" }
@@ -352,11 +411,10 @@ if (balanceBoardElement) {
 
 
 
+
 function createCard(value, customLeft = null, customTop = null, playSpawnAnim = true) {
     const currentCardsCount = document.querySelectorAll('.drag-item:not(.absorb-anim)').length;
-    if (currentCardsCount >= MAX_CARDS) {
-        return false; 
-    }
+    if (currentCardsCount >= MAX_CARDS) return false; 
 
     const item = document.createElement('div');
     item.id = `item-${cardCounter++}`;
@@ -378,10 +436,8 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     let isMoving = false;
     let touchStartTime = 0;
 
-    // === МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ ===
-
+    // === 📱 МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ (РАБОЧИЙ ФИКС) ===
     item.addEventListener('touchstart', (e) => {
-        // УБРАЛИ e.preventDefault(), чтобы не блокировать интерфейсы смартфона и поповеры!
         const touch = e.touches[0];
         const rect = item.getBoundingClientRect();
         offsetX = touch.clientX - rect.left;
@@ -389,13 +445,11 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         touchStartTime = Date.now();
         isMoving = false;
         item.classList.add('dragging');
-    }, { passive: true }); // passive: true разрешает браузеру обрабатывать клики без задержек
+    }, { passive: true });
 
     item.addEventListener('touchmove', (e) => {
-        // Блокируем скролл шторки Telegram только ТОГДА, когда карточка РЕАЛЬНО двигается
         if (e.cancelable) e.preventDefault(); 
         isMoving = true;
-        
         const touch = e.touches[0];
         const containerRect = sandbox.getBoundingClientRect();
         
@@ -410,6 +464,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         if (newLeft > maxLeft) newLeft = maxLeft;
         if (newTop > maxTop) newTop = maxTop;
         
+        // Двигаем СТРОГО в пикселях (px) во время удержания пальца, чтобы карточка не пропадала!
         item.style.left = `${newLeft}px`;
         item.style.top = `${newTop}px`;
         
@@ -419,7 +474,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         if (elementUnderTouch && elementUnderTouch.classList.contains('drag-item') && elementUnderTouch !== item) {
             elementUnderTouch.classList.add('hovered');
         }
-    }, { passive: false }); // Тут passive: false обязателен, чтобы работал preventDefault скролла
+    }, { passive: false });
 
     item.addEventListener('touchend', (e) => {
         item.classList.remove('dragging');
@@ -440,6 +495,8 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         }
         
         const changedTouch = e.changedTouches[0];
+        
+        // Переводим текущие пиксели в адаптивные проценты (%) строго ОДИН раз при отпускании экрана!
         const currentLeftPx = parseFloat(item.style.left);
         const currentTopPx = parseFloat(item.style.top);
         const leftPercent = (currentLeftPx / sandbox.clientWidth) * 100;
@@ -462,7 +519,6 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     });
 
     // === ДЕСКТОПНЫЕ СОБЫТИЯ МЫШИ (ПК) ===
-
     item.addEventListener('mousedown', (e) => {
         const rect = item.getBoundingClientRect();
         offsetX = e.clientX - rect.left;
@@ -472,11 +528,9 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     item.addEventListener('click', (e) => {
         item.classList.add('click-anim');
         setTimeout(() => { item.classList.remove('click-anim'); }, 150);
-
         const cardValue = Number(item.getAttribute('data-value'));
         updateBalance(cardValue);
         spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
-
         mergeSound.currentTime = 0;
         mergeSound.play().catch(err => console.log(err));
         calculatePPS(); 
@@ -502,10 +556,8 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         e.preventDefault();
         e.stopPropagation();
         item.classList.remove('hovered');
-
         const draggedId = e.dataTransfer.getData('text/plain');
         const draggedElement = document.getElementById(draggedId);
-
         if (draggedElement && draggedElement !== item && draggedElement.textContent === item.textContent) {
             handleCardsMerge(item, draggedElement);
         }
@@ -572,9 +624,7 @@ function buyCard(value) {
             updateBalance(-currentPrice);
             prices[value] = Math.round(currentPrice * 1.15);
             document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
-            
-            // ФИКС: Пересчитываем состояние кнопок сразу после покупки
-            checkShopButtons(); 
+            checkShopButtons();
             saveGame(); 
         }
     }
@@ -611,11 +661,10 @@ sandbox.addEventListener('drop', (e) => {
 
 // === ЗАПУСК ИГРЫ ===
 refreshShopVisibility();
-
+updateUpgradeUI();
 const loaded = loadGame();
 if (!loaded) {
     autoSpawn();
 }
-
 setInterval(updateTimerIndicator, timerStep);
 setInterval(collectPassiveIncome, PASSIVE_INCOME_INTERVAL);

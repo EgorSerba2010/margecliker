@@ -86,6 +86,7 @@ body {
     height: 50px;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border: #2ecc71 solid 2px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -553,3 +554,139 @@ body {
     font-weight: 900;
     margin: 5px 0 25px 0;
 }
+
+/* Стиль счётчика алмазов на верхней панели */
+.diamonds-counter {
+    font-size: 18px;
+    font-weight: bold;
+    color: #9b5de5; /* Алмазный фиолетовый оттенок */
+    margin: 2px 0;
+}
+
+/* Строчка награды алмазами в окне рекордов */
+.diamonds-reward-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #9b5de5;
+    margin: 5px 0 15px 0;
+    animation: pulseReward 1s infinite alternate;
+}
+
+@keyframes pulseReward {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+}
+
+/* Ряд для кнопок вызова магазинов */
+.shop-anchors-row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Новая фиолетовая кнопка улучшений */
+#upgrades-anchor {
+    font-size: 24px;
+    background: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.1s;
+    border: 2px solid #9b5de5; /* Фиолетовый ободок */
+    
+    &:active {
+        transform: scale(0.9);
+    }
+}
+
+/* Общие стили для поповера улучшений (копируют стиль обычного магазина) */
+#upgrades-shop {
+    opacity: 0;
+    gap: 15px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 360px;
+    box-sizing: border-box;
+    transform: translateY(-20px);
+    transition: all 0.3s allow-discrete;
+    border: none;
+    flex-direction: column;
+
+    &:popover-open {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#upgrades-shop::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
+}
+
+@starting-style {
+    #upgrades-shop:popover-open {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+/* Блок текстовой инфы об улучшении (слева) */
+.upgrade-item-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    flex: 1;
+}
+
+.upgrade-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.upgrade-desc {
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.upgrade-level {
+    font-size: 11px;
+    font-weight: bold;
+    color: #9b5de5;
+    background: #f1e7fe;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-top: 2px;
+}
+
+/* Кнопка покупки улучшения (справа) */
+.upgrade-btn {
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #9b5de5; /* Фиолетовая кнопка алмазов */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    text-align: center;
+    min-width: 80px;
+    box-shadow: 0 3px 6px rgba(155, 93, 229, 0.2);
+}
+
+.upgrade-btn:hover { background-color: #833ab4; }
+.upgrade-btn:active { transform: scale(0.95); }
+.upgrade-btn:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; }
