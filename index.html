@@ -34,10 +34,9 @@
         <!-- Игровое поле -->
         <div id="sandbox" class="container"></div>
         
-                <!-- Кнопки управления магазинами -->
+        <!-- Кнопки управления магазинами -->
         <div class="shop-anchors-row">
             <button id="anchor" popovertarget="shop">🛒</button>
-            <!-- НОВАЯ КНОПКА ДЛЯ УЛУЧШЕНИЙ -->
             <button id="upgrades-anchor" popovertarget="upgrades-shop">💎</button>
         </div>
         
@@ -88,11 +87,10 @@
             </div>
         </div>
 
-        <!-- НОВОЕ ПОПОВЕР-МЕНЮ УЛУЧШЕНИЙ -->
+        <!-- Поповер-меню улучшений за алмазы -->
         <div class="shop-container" id="upgrades-shop" popover>
             <h2 class="shop-main-title">УЛУЧШЕНИЯ</h2>
             <div class="shop-list">
-                <!-- Буст 1: Оффлайн таймер -->
                 <div class="shop-item-row">
                     <div class="upgrade-item-info">
                         <span class="upgrade-name">Сон инвестора</span>
@@ -103,16 +101,28 @@
                         <span id="price-boost-offline">2</span> 💎
                     </button>
                 </div>
-                
-                <!-- Сюда в будущем сможем добавлять новые бусты -->
             </div>
         </div>
 
+        <!-- ВЕРНУЛИ: ОКНО ПОЗДРАВЛЕНИЯ (ПОПОВЕР) -->
+        <div class="unlock-popup-container" id="unlock-popup" popover>
+            <h2 class="unlock-title shiny-text">ПОЗДРАВЛЯЕМ!</h2>
+            <p class="unlock-subtitle">Вы открыли новую карточку:</p>
+            
+            <div id="unlocked-card-display" class="drag-item-preview"></div>
+            
+            <!-- Посадочное место для начисления алмазов -->
+            <p class="diamonds-reward-text" id="diamonds-reward-text">Награда: 💎 <span id="diamonds-reward-value">0</span></p>
+            
+            <p id="shop-alert-text" class="shop-alert"></p>
+            
+            <button class="unlock-close-btn" onclick="document.getElementById('unlock-popup').hidePopover()">ОТЛИЧНО!</button>
+        </div>
 
         <!-- Окно оффлайн дохода -->
         <div class="unlock-popup-container" id="offline-popup" popover>
             <h2 class="unlock-title shiny-text">С ВОЗВРАЩЕНИЕМ!</h2>
-            <p class="unlock-subtitle" id="offline-time-text">Вас не было в игре: 0 сек</p>
+            <p class="unlock-subtitle" id="offline-time-text">Вас не было in игре: 0 сек</p>
             <div class="offline-gold-icon">💰</div>
             <p class="offline-reward-text">Вы заработали пассивно:</p>
             <h3 class="offline-reward-value">+<span id="offline-reward-value">0</span> $</h3>
