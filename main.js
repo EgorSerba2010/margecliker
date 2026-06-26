@@ -24,7 +24,7 @@ let AdController = null;
 
 if (window.Adsgram) {
     // Если библиотека успешно скачалась, привязываем тестовый ID "1"
-    AdController = window.Adsgram.init({ blockId: "34247" });
+    AdController = window.Adsgram.init({ blockId: "8875256260" });
     console.log("Adsgram SDK успешно инициализировано!");
 } else {
     // Если объект window.Adsgram пустой — выводим табличку на экран смартфона
