@@ -19,7 +19,7 @@ const BASE_MAX_OFFLINE_TIME = 3600; // 1 час
 const ADS_COOLDOWN_TIME = 180000; // Перезарядка ТВ: 3 минуты (180 000 мс)
 
 // === ИНТЕГРАЦИЯ НАСТОЯЩЕГО ADSGRAM SDK ===
-const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "34247" }) : null;
+const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "1" }) : null;
 
 let prices = {
     1: 10,
