@@ -19,7 +19,18 @@ const BASE_MAX_OFFLINE_TIME = 3600; // 1 час
 const ADS_COOLDOWN_TIME = 180000; // Перезарядка ТВ: 3 минуты (180 000 мс)
 
 // === ИНТЕГРАЦИЯ НАСТОЯЩЕГО ADSGRAM SDK ===
-const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "1" }) : null;
+// Проверяем, загрузился ли скрипт Adsgram на устройство
+let AdController = null;
+
+if (window.Adsgram) {
+    // Если библиотека успешно скачалась, привязываем тестовый ID "1"
+    AdController = window.Adsgram.init({ blockId: "1" });
+    console.log("Adsgram SDK успешно инициализировано!");
+} else {
+    // Если объект window.Adsgram пустой — выводим табличку на экран смартфона
+    alert("КРИТИЧЕСКАЯ ОШИБКА: Телефон не смог загрузить скрипт sad.min.js из HTML!");
+}
+
 
 let prices = {
     1: 10,
@@ -369,7 +380,7 @@ function startRewardedAd(rewardType) {
 
     // Проверяем, загрузился ли скрипт Adsgram SDK
     if (!AdController) {
-        alert("Реклама временно недоступна. Пожалуйста, попробуйте позже...");
+        alert("Реклама временно недоступна. Пожалуйста, попробуйте позже.'(");
         return;
     }
 
