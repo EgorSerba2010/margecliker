@@ -16,7 +16,7 @@ const BASE_SPAWN_INTERVAL = 10000;
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
 const BASE_MAX_OFFLINE_TIME = 3600; // 1 час
-const ADS_COOLDOWN_TIME = 180000; // Перезарядка ТВ: 3 минуты (180 000 мс)
+const ADS_COOLDOWN_TIME = 60000; // Перезарядка ТВ: 3 минуты (180 000 мс)
 
 // === ИНТЕГРАЦИЯ НАСТОЯЩЕГО ADSGRAM SDK ===
 // Проверяем, загрузился ли скрипт Adsgram на устройство
