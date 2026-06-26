@@ -4,13 +4,17 @@ const ppsValueEl = document.getElementById('pps-value');
 const timerRing = document.getElementById('timer-ring');
 const diamondsValueEl = document.getElementById('diamonds-value');
 
-const mergeSound = new Audio('click.mp3');
+const clickSound = new Audio('click.mp3'); // кликаешь на карточку
+const mergeSound = new Audio('merge.mp3'); // соединяешь карточки
+const buySound = new Audio('buy.mp3'); // покупаешь что-то
+const openSound = new Audio('open.mp3'); // открываешь и закрываешь магазин и улучшения
+const congratsSound = new Audio('congrats.mp3'); // новая карточка открыта
 
 // Игровые настройки
-const SPAWN_INTERVAL = 10000; 
+const BASE_SPAWN_INTERVAL = 10000; 
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
-const BASE_MAX_OFFLINE_TIME = 3600; // Базовое время оффлайна (1 час)
+const BASE_MAX_OFFLINE_TIME = 3600; // 1 час
 
 let prices = {
     1: 10,
@@ -25,11 +29,22 @@ let prices = {
     512: 10000000,
 };
 
-// === ДАННЫЕ УЛУЧШЕНИЙ ЗА АЛМАЗЫ ===
+// === ОБНОВЛЕННЫЕ ДАННЫЕ УЛУЧШЕНИЙ С МАКСИМАЛЬНЫМ УРОВНЕМ ===
 let upgrades = {
     offline: {
         level: 0,
-        price: 2 // Стартовая цена в алмазах
+        price: 2,
+        maxLevel: 18 // Ограничение: максимум 18 уровень
+    },
+    tier: {
+        level: 0,
+        price: 5,   // Твоя цена: всегда 5 алмазов
+        maxLevel: 5  // Ограничение: максимум 5 уровень
+    },
+    speed: {
+        level: 0,
+        price: 2,
+        maxLevel: 7
     }
 };
 
@@ -110,7 +125,7 @@ function checkCardUnlocks(value) {
 
         const diamondsEarned = value.toString().length;
         diamonds += diamondsEarned; 
-        diamondsValueEl.textContent = formatNumber(diamonds);
+        if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
         diamondsRewardValueEl.textContent = diamondsEarned;
 
         if (shopOpenedANewItem) {
@@ -119,6 +134,9 @@ function checkCardUnlocks(value) {
         } else {
             alertText.style.display = 'none';
         }
+
+        congratsSound.currentTime = 0;
+        congratsSound.play().catch(err => console.log(err));
         popup.showPopover();
     }
 }
@@ -134,38 +152,91 @@ function refreshShopVisibility() {
     });
 }
 
-// Новая функция: проверка доступности фиолетовых кнопок в магазине бустов
+// Проверка доступности фиолетовых кнопок улучшений с учетом МАКСИМАЛЬНОГО УРОВНЯ
 function checkUpgradeButtons() {
-    const btn = document.getElementById('buy-boost-offline-btn');
-    if (btn) {
-        btn.disabled = diamonds < upgrades.offline.price;
+    const btnOffline = document.getElementById('buy-boost-offline-btn');
+    if (btnOffline) {
+        btnOffline.disabled = upgrades.offline.level >= upgrades.offline.maxLevel || diamonds < upgrades.offline.price;
+    }
+
+    const btnTier = document.getElementById('buy-boost-tier-btn');
+    if (btnTier) {
+        btnTier.disabled = upgrades.tier.level >= upgrades.tier.maxLevel || diamonds < upgrades.tier.price;
+    }
+
+    const btnSpeed = document.getElementById('buy-boost-speed-btn');
+    if (btnSpeed) {
+        btnSpeed.disabled = upgrades.speed.level >= upgrades.speed.maxLevel || diamonds < upgrades.speed.price;
     }
 }
 
-// Обновление текстовых данных буста на экране
+// Обновление текста, уровней и цен в интерфейсе улучшений
 function updateUpgradeUI() {
-    const lvlEl = document.getElementById('boost-offline-lvl');
-    const priceEl = document.getElementById('price-boost-offline');
-    if (lvlEl) lvlEl.textContent = upgrades.offline.level;
-    if (priceEl) priceEl.textContent = upgrades.offline.price;
+    // 1. Оффлайн-буст
+    const offlineLvlEl = document.getElementById('boost-offline-lvl');
+    const offlinePriceEl = document.getElementById('price-boost-offline');
+    if (offlineLvlEl) offlineLvlEl.textContent = upgrades.offline.level;
+    if (offlinePriceEl) {
+        if (upgrades.offline.level >= upgrades.offline.maxLevel) {
+            offlinePriceEl.parentNode.innerHTML = "MAX";
+        } else {
+            offlinePriceEl.textContent = upgrades.offline.price;
+        }
+    }
+
+    // 2. Тир-буст (Эволюция спавна)
+    const tierLvlEl = document.getElementById('boost-tier-lvl');
+    const tierPriceEl = document.getElementById('price-boost-tier');
+    if (tierLvlEl) tierLvlEl.textContent = upgrades.tier.level;
+    if (tierPriceEl) {
+        if (upgrades.tier.level >= upgrades.tier.maxLevel) {
+            tierPriceEl.parentNode.innerHTML = "MAX";
+        } else {
+            tierPriceEl.textContent = upgrades.tier.price;
+        }
+    }
+
+    // 3. Спид-буст (Конвейер карт)
+    const speedLvlEl = document.getElementById('boost-speed-lvl');
+    const speedPriceEl = document.getElementById('price-boost-speed');
+    if (speedLvlEl) speedLvlEl.textContent = upgrades.speed.level;
+    if (speedPriceEl) {
+        if (upgrades.speed.level >= upgrades.speed.maxLevel) {
+            speedPriceEl.parentNode.innerHTML = "MAX";
+        } else {
+            speedPriceEl.textContent = upgrades.speed.price;
+        }
+    }
+
     checkUpgradeButtons();
 }
 
-// ФУНКЦИЯ ПОКУПКИ УЛУЧШЕНИЙ ЗА АЛМАЗЫ
+// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ПОКУПКИ УЛУЧШЕНИЙ БЕЗ ИНФЛЯЦИИ ЦЕНЫ
 function buyUpgrade(type) {
-    if (type === 'offline') {
-        const currentPrice = upgrades.offline.price;
-        if (diamonds >= currentPrice) {
-            diamonds -= currentPrice; // Списываем алмазы
-            upgrades.offline.level += 1; // Повышаем уровень
-            
-            if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
-            updateUpgradeUI();
-            checkShopButtons(); // Обычные кнопки тоже пересчитаем
-            saveGame();
-        }
+    if (!upgrades[type]) return;
+
+    const data = upgrades[type];
+    
+    if (data.level < data.maxLevel && diamonds >= data.price) {
+        diamonds -= data.price;
+        data.level += 1; // Увеличиваем уровень, фиксированная цена сохраняется!
+
+        if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
+        updateUpgradeUI();
+        checkShopButtons();
+        saveGame();
     }
 }
+
+['shop', 'upgrades-shop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('beforetoggle', () => {
+            openSound.currentTime = 0;
+            openSound.play().catch(err => console.log(err));
+        });
+    }
+});
 
 function saveGame() {
     const cardsData = [];
@@ -183,7 +254,7 @@ function saveGame() {
         balance: balance, 
         diamonds: diamonds,
         prices: prices, 
-        upgrades: upgrades, // Сохраняем уровни бустов
+        upgrades: upgrades,
         cards: cardsData,
         unlockedItems: unlockedItems,
         discoveredCards: discoveredCards,
@@ -203,11 +274,13 @@ function loadGame() {
             diamonds = gameState.diamonds || 0;
             if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
 
-            // Восстанавливаем уровни апгрейдов из сохранения
+            // Безопасное восстановление уровней апгрейдов из сохранения
             if (gameState.upgrades) {
-                upgrades = gameState.upgrades;
+                upgrades.offline.level = gameState.upgrades.offline ? gameState.upgrades.offline.level : 0;
+                if (gameState.upgrades.tier) upgrades.tier.level = gameState.upgrades.tier.level;
+                // Страховка: если у игрока старый сейв, где не было спид-буста, ставим 0
+                if (gameState.upgrades.speed) upgrades.speed.level = gameState.upgrades.speed.level;
             }
-            // Сразу выводим актуальные уровни и цены бустов на экран
             updateUpgradeUI();
 
             if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
@@ -228,7 +301,7 @@ function loadGame() {
             calculatePPS();
             checkShopButtons();
 
-            // РАСЧЕТ ОФФЛАЙН ДОХОДА С УЧЕТОМ БУСТА
+            // РАСЧЕТ ОФФЛАЙН ДОХОДА
             if (gameState.lastSaveTime) {
                 const timeDiffMs = Date.now() - gameState.lastSaveTime;
                 let secondsPassed = Math.floor(timeDiffMs / 1000);
@@ -240,8 +313,6 @@ function loadGame() {
 
                     if (currentPPS > 0) {
                         let actualOfflineSeconds = secondsPassed;
-                        
-                        // ДИНАМИЧЕСКИЙ ЛИМИТ: Базовый час (3600с) + 30 минут (1800с) за каждый уровень буста
                         const currentMaxOfflineTime = BASE_MAX_OFFLINE_TIME + (upgrades.offline.level * 1800);
 
                         if (actualOfflineSeconds > currentMaxOfflineTime) {
@@ -257,10 +328,9 @@ function loadGame() {
                             const rewardValue = document.getElementById('offline-reward-value');
 
                             if (offlinePopup && timeText && rewardValue) {
-                                // Вычисляем лимит в часах для красивого текста
                                 const maxHours = (currentMaxOfflineTime / 3600).toFixed(1);
                                 timeText.textContent = `Вас не было в игре: ${formatOfflineTime(secondsPassed)}` + 
-                                    (secondsPassed > currentMaxOfflineTime ? ` (max ${parseFloat(maxHours)} ч)` : '');
+                                    (secondsPassed > currentMaxOfflineTime ? ` (MAX ${parseFloat(maxHours)} ч)` : '');
                                 rewardValue.textContent = formatNumber(offlineEarnings);
                                 setTimeout(() => offlinePopup.showPopover(), 500);
                             }
@@ -285,15 +355,20 @@ function hardResetGame() {
     }
 }
 
+// === ОБНОВЛЕННАЯ ДИНАМИЧЕСКАЯ ИНДИКАЦИЯ ТАЙМЕРА СПАВНА ===
 function updateTimerIndicator() {
     timePassed += timerStep;
-    const progress = Math.min(timePassed / SPAWN_INTERVAL, 1);
+
+    // Считаем текущий интервал: базовые 10 сек минус 1 сек за каждый уровень буста
+    const currentSpawnInterval = BASE_SPAWN_INTERVAL - (upgrades.speed.level * 1000);
+
+    const progress = Math.min(timePassed / currentSpawnInterval, 1);
     const offset = circleCircumference - (progress * circleCircumference);
     timerRing.style.strokeDashoffset = offset;
 
-    if (timePassed >= SPAWN_INTERVAL) {
-        timePassed = 0; 
-        autoSpawn();    
+    if (timePassed >= currentSpawnInterval) {
+        timePassed = 0;
+        autoSpawn();
     }
 }
 
@@ -349,7 +424,7 @@ function updateBalance(amount) {
     balance += amount;
     balanceValueEl.textContent = formatNumber(balance);
     checkShopButtons();
-    checkUpgradeButtons(); // Проверяем доступность фиолетовых кнопок
+    checkUpgradeButtons(); 
 }
 
 function checkShopButtons() {
@@ -360,14 +435,23 @@ function checkShopButtons() {
 }
 
 function getRandomPercent(min, max) { return Math.random() * (max - min) + min; }
+
+// === ИСПРАВЛЕННАЯ МАТЕМАТИКА ЭВОЛЮЦИИ ТИРОВ ===
 function getRandomSpawnValue() {
     const rand = Math.random();
-    if (rand < 0.5) return 1;       
-    if (rand < 0.8) return 2;       
-    return 4;                       
+    let baseValue = 1;
+    
+    // Твои вероятности: 50%, 30%, 20%
+    if (rand < 0.5) baseValue = 1;       
+    else if (rand < 0.8) baseValue = 2;       
+    else baseValue = 4;                       
+
+    // Умножаем базу на 2 в степени уровня буста (уровень 0 = х1, уровень 1 = х2, уровень 2 = х4...)
+    const multiplier = Math.pow(2, upgrades.tier.level);
+    return baseValue * multiplier;
 }
 
-// Чит-код разработчика
+// Сбалансированный чит-код разработчика
 let balanceClicks = 0;
 let lastBalanceClickTime = 0;
 const balanceBoardElement = document.querySelector('.balance-board');
@@ -384,13 +468,16 @@ if (balanceBoardElement) {
 
         if (balanceClicks === 5) {
             balanceClicks = 0;
-            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $ и 50 💎. Продолжить?")) {
+            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $ и 100 💎. Продолжить?")) {
                 localStorage.removeItem('clicker_game_save');
                 const freshState = {
                     balance: 20000000,
-                    diamonds: 10,
+                    diamonds: 100, // Твой новый баланс алмазов в чите
                     prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
-                    upgrades: { offline: { level: 0, price: 2 } },
+                    upgrades: { 
+                        offline: { level: 0, price: 2, maxLevel: 18 },
+                        tier: { level: 0, price: 5, maxLevel: 5 }
+                    },
                     cards: [
                         { value: 4, left: "20%", top: "30%" },
                         { value: 4, left: "60%", top: "40%" }
@@ -436,7 +523,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     let isMoving = false;
     let touchStartTime = 0;
 
-    // === 📱 МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ (РАБОЧИЙ ФИКС) ===
+    // === МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ ===
     item.addEventListener('touchstart', (e) => {
         const touch = e.touches[0];
         const rect = item.getBoundingClientRect();
@@ -464,7 +551,6 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         if (newLeft > maxLeft) newLeft = maxLeft;
         if (newTop > maxTop) newTop = maxTop;
         
-        // Двигаем СТРОГО в пикселях (px) во время удержания пальца, чтобы карточка не пропадала!
         item.style.left = `${newLeft}px`;
         item.style.top = `${newTop}px`;
         
@@ -485,8 +571,8 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
             updateBalance(cardValue);
             spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
             
-            mergeSound.currentTime = 0;
-            mergeSound.play().catch(err => console.log(err));
+            clickSound.currentTime = 0;
+            clickSound.play().catch(err => console.log(err));
             
             item.classList.add('click-anim');
             setTimeout(() => { item.classList.remove('click-anim'); }, 150);
@@ -495,8 +581,6 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         }
         
         const changedTouch = e.changedTouches[0];
-        
-        // Переводим текущие пиксели в адаптивные проценты (%) строго ОДИН раз при отпускании экрана!
         const currentLeftPx = parseFloat(item.style.left);
         const currentTopPx = parseFloat(item.style.top);
         const leftPercent = (currentLeftPx / sandbox.clientWidth) * 100;
@@ -531,8 +615,8 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         const cardValue = Number(item.getAttribute('data-value'));
         updateBalance(cardValue);
         spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
-        mergeSound.currentTime = 0;
-        mergeSound.play().catch(err => console.log(err));
+        clickSound.currentTime = 0;
+        clickSound.play().catch(err => console.log(err));
         calculatePPS(); 
         saveGame(); 
     });

@@ -90,7 +90,8 @@
         <!-- Поповер-меню улучшений за алмазы -->
         <div class="shop-container" id="upgrades-shop" popover>
             <h2 class="shop-main-title">УЛУЧШЕНИЯ</h2>
-            <div class="shop-list">
+                <div class="shop-list">
+                <!-- Буст 1: Оффлайн таймер -->
                 <div class="shop-item-row">
                     <div class="upgrade-item-info">
                         <span class="upgrade-name">Сон инвестора</span>
@@ -99,6 +100,30 @@
                     </div>
                     <button class="upgrade-btn" id="buy-boost-offline-btn" onclick="buyUpgrade('offline')">
                         <span id="price-boost-offline">2</span> 💎
+                    </button>
+                </div>
+
+                <!-- Буст 2: Повышение уровня спавна -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Эволюция спавна</span>
+                        <span class="upgrade-desc">Стартовые карты: +1 тир (х2)</span>
+                        <span class="upgrade-level">Ур. <span id="boost-tier-lvl">0</span></span>
+                    </div>
+                    <button class="upgrade-btn" id="buy-boost-tier-btn" onclick="buyUpgrade('tier')">
+                        <span id="price-boost-tier">5</span> 💎
+                    </button>
+                </div>
+
+                <!-- НОВЫЙ БУСТ 3: Ускорение таймера спавна -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Конвейер карт</span>
+                        <span class="upgrade-desc">Интервал спавна: -1 сек</span>
+                        <span class="upgrade-level">Ур. <span id="boost-speed-lvl">0</span></span>
+                    </div>
+                    <button class="upgrade-btn" id="buy-boost-speed-btn" onclick="buyUpgrade('speed')">
+                        <span id="price-boost-speed">1</span> 💎
                     </button>
                 </div>
             </div>
