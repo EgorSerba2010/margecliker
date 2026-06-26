@@ -34,10 +34,42 @@
         <!-- Игровое поле -->
         <div id="sandbox" class="container"></div>
         
-        <!-- Кнопки управления магазинами -->
+        <!-- Кнопки управления магазинами и рекламой -->
         <div class="shop-anchors-row">
-            <button id="anchor" popovertarget="shop">🛒</button>
-            <button id="upgrades-anchor" popovertarget="upgrades-shop">💎</button>
+            <button id="anchor" popovertarget="shop" title="Магазин карточек">🛒</button>
+            <button id="upgrades-anchor" popovertarget="upgrades-shop" title="Улучшения">💎</button>
+            <!-- Изменили: теперь кнопка открывает поповер выбора -->
+            <button id="ads-anchor" popovertarget="ads-choice-popup" title="Посмотреть рекламу">📺</button>
+        </div>
+
+        <!-- НОВОЕ ОКНО ВЫБОРА НАГРАДЫ ЗА РЕКЛАМУ (ПОПОВЕР) -->
+        <div class="shop-container" id="ads-choice-popup" popover>
+            <h2 class="shop-main-title">НАГРАДА ЗА ТВ</h2>
+            <p class="unlock-subtitle" style="margin-bottom: 15px;">Выберите бонус за просмотр ролика:</p>
+            
+            <div class="shop-list" style="max-height: none; overflow: visible;">
+                <!-- Опция 1: Алмаз -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Премиум бонус</span>
+                        <span class="upgrade-desc">Получить ценную валюту</span>
+                    </div>
+                    <button class="upgrade-btn" onclick="startRewardedAd('diamond')" style="min-width: 90px;">
+                        +1 💎
+                    </button>
+                </div>
+                
+                <!-- Опция 2: 15 минут денег -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Быстрый капитал</span>
+                        <span class="upgrade-desc">Деньги за 15 мин. игры</span>
+                    </div>
+                    <button class="upgrade-btn" onclick="startRewardedAd('money')" style="background-color: #2ecc71; box-shadow: 0 3px 6px rgba(46,204,113,0.2); min-width: 90px;">
+                        +15м 💰
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- Поповер-меню обычного магазина -->

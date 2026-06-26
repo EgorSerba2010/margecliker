@@ -4,17 +4,22 @@ const ppsValueEl = document.getElementById('pps-value');
 const timerRing = document.getElementById('timer-ring');
 const diamondsValueEl = document.getElementById('diamonds-value');
 
-const clickSound = new Audio('click.mp3'); // кликаешь на карточку
-const mergeSound = new Audio('merge.mp3'); // соединяешь карточки
-const buySound = new Audio('buy.mp3'); // покупаешь что-то
-const openSound = new Audio('open.mp3'); // открываешь и закрываешь магазин и улучшения
-const congratsSound = new Audio('congrats.mp3'); // новая карточка открыта
+// === 🎵 ТВОЙ ОБНОВЛЕННЫЙ ЗВУКОВОЙ ПАК ===
+const clickSound = new Audio('click.mp3'); 
+const mergeSound = new Audio('merge.mp3'); 
+const buySound = new Audio('buy.mp3'); 
+const openSound = new Audio('open.mp3'); 
+const congratsSound = new Audio('congrats.mp3'); 
 
 // Игровые настройки
 const BASE_SPAWN_INTERVAL = 10000; 
 const MAX_CARDS = 32; 
 const PASSIVE_INCOME_INTERVAL = 4000; 
 const BASE_MAX_OFFLINE_TIME = 3600; // 1 час
+const ADS_COOLDOWN_TIME = 180000; // Перезарядка ТВ: 3 минуты (180 000 мс)
+
+// === ИНТЕГРАЦИЯ НАСТОЯЩЕГО ADSGRAM SDK ===
+const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "34247" }) : null;
 
 let prices = {
     1: 10,
@@ -29,23 +34,11 @@ let prices = {
     512: 10000000,
 };
 
-// === ОБНОВЛЕННЫЕ ДАННЫЕ УЛУЧШЕНИЙ С МАКСИМАЛЬНЫМ УРОВНЕМ ===
+// Фиксированные цены по твоей задумке (без инфляции) + лимиты уровней
 let upgrades = {
-    offline: {
-        level: 0,
-        price: 2,
-        maxLevel: 18 // Ограничение: максимум 18 уровень
-    },
-    tier: {
-        level: 0,
-        price: 5,   // Твоя цена: всегда 5 алмазов
-        maxLevel: 5  // Ограничение: максимум 5 уровень
-    },
-    speed: {
-        level: 0,
-        price: 2,
-        maxLevel: 7
-    }
+    offline: { level: 0, price: 2, maxLevel: 18 },
+    tier: { level: 0, price: 5, maxLevel: 5 },
+    speed: { level: 0, price: 1, maxLevel: 7 }
 };
 
 let unlockedItems = [1, 2, 4];
@@ -53,6 +46,8 @@ let discoveredCards = [1, 2, 4];
 
 let balance = 100;
 let diamonds = 0;
+let lastAdWatchTime = 0; // Таймстамп последнего успешного просмотра ТВ
+let selectedAdRewardType = null; // Какую награду выбрал игрок ('diamond' или 'money')
 
 // Переменные для Drag and Drop / Touch
 let offsetX = 0;
@@ -123,6 +118,7 @@ function checkCardUnlocks(value) {
         cardDisplay.textContent = formatNumber(value); 
         updateCardColorClass(cardDisplay, value);
 
+        // Начисление алмазов по твоей формуле длины числа
         const diamondsEarned = value.toString().length;
         diamonds += diamondsEarned; 
         if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
@@ -135,8 +131,10 @@ function checkCardUnlocks(value) {
             alertText.style.display = 'none';
         }
 
+        // КАРТОЧКА ОТКРЫТА: Включаем праздничный звук congratsSound
         congratsSound.currentTime = 0;
         congratsSound.play().catch(err => console.log(err));
+
         popup.showPopover();
     }
 }
@@ -152,7 +150,6 @@ function refreshShopVisibility() {
     });
 }
 
-// Проверка доступности фиолетовых кнопок улучшений с учетом МАКСИМАЛЬНОГО УРОВНЯ
 function checkUpgradeButtons() {
     const btnOffline = document.getElementById('buy-boost-offline-btn');
     if (btnOffline) {
@@ -170,9 +167,7 @@ function checkUpgradeButtons() {
     }
 }
 
-// Обновление текста, уровней и цен в интерфейсе улучшений
 function updateUpgradeUI() {
-    // 1. Оффлайн-буст
     const offlineLvlEl = document.getElementById('boost-offline-lvl');
     const offlinePriceEl = document.getElementById('price-boost-offline');
     if (offlineLvlEl) offlineLvlEl.textContent = upgrades.offline.level;
@@ -184,7 +179,6 @@ function updateUpgradeUI() {
         }
     }
 
-    // 2. Тир-буст (Эволюция спавна)
     const tierLvlEl = document.getElementById('boost-tier-lvl');
     const tierPriceEl = document.getElementById('price-boost-tier');
     if (tierLvlEl) tierLvlEl.textContent = upgrades.tier.level;
@@ -196,7 +190,6 @@ function updateUpgradeUI() {
         }
     }
 
-    // 3. Спид-буст (Конвейер карт)
     const speedLvlEl = document.getElementById('boost-speed-lvl');
     const speedPriceEl = document.getElementById('price-boost-speed');
     if (speedLvlEl) speedLvlEl.textContent = upgrades.speed.level;
@@ -211,15 +204,17 @@ function updateUpgradeUI() {
     checkUpgradeButtons();
 }
 
-// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ПОКУПКИ УЛУЧШЕНИЙ БЕЗ ИНФЛЯЦИИ ЦЕНЫ
 function buyUpgrade(type) {
     if (!upgrades[type]) return;
-
     const data = upgrades[type];
     
     if (data.level < data.maxLevel && diamonds >= data.price) {
         diamonds -= data.price;
-        data.level += 1; // Увеличиваем уровень, фиксированная цена сохраняется!
+        data.level += 1; // Уровень повышен, цена зафиксирована!
+
+        // КУПИЛИ БУСТ С КРИСТАЛЛАМИ: Включаем buySound
+        buySound.currentTime = 0;
+        buySound.play().catch(err => console.log(err));
 
         if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
         updateUpgradeUI();
@@ -227,16 +222,6 @@ function buyUpgrade(type) {
         saveGame();
     }
 }
-
-['shop', 'upgrades-shop'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener('beforetoggle', () => {
-            openSound.currentTime = 0;
-            openSound.play().catch(err => console.log(err));
-        });
-    }
-});
 
 function saveGame() {
     const cardsData = [];
@@ -258,7 +243,8 @@ function saveGame() {
         cards: cardsData,
         unlockedItems: unlockedItems,
         discoveredCards: discoveredCards,
-        lastSaveTime: Date.now()
+        lastSaveTime: Date.now(),
+        lastAdWatchTime: lastAdWatchTime // Сохраняем кулдаун ТВ в память смартфона
     };
     localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
 }
@@ -274,11 +260,9 @@ function loadGame() {
             diamonds = gameState.diamonds || 0;
             if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
 
-            // Безопасное восстановление уровней апгрейдов из сохранения
             if (gameState.upgrades) {
                 upgrades.offline.level = gameState.upgrades.offline ? gameState.upgrades.offline.level : 0;
                 if (gameState.upgrades.tier) upgrades.tier.level = gameState.upgrades.tier.level;
-                // Страховка: если у игрока старый сейв, где не было спид-буста, ставим 0
                 if (gameState.upgrades.speed) upgrades.speed.level = gameState.upgrades.speed.level;
             }
             updateUpgradeUI();
@@ -286,6 +270,9 @@ function loadGame() {
             if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
             if (gameState.discoveredCards) discoveredCards = gameState.discoveredCards;
             
+            // Восстанавливаем кулдаун ТВ
+            lastAdWatchTime = gameState.lastAdWatchTime || 0;
+
             Object.keys(prices).forEach(val => {
                 const priceEl = document.getElementById(`price-${val}`);
                 if (priceEl) priceEl.textContent = formatNumber(prices[val]);
@@ -355,22 +342,156 @@ function hardResetGame() {
     }
 }
 
-// === ОБНОВЛЕННАЯ ДИНАМИЧЕСКАЯ ИНДИКАЦИЯ ТАЙМЕРА СПАВНА ===
 function updateTimerIndicator() {
     timePassed += timerStep;
-
-    // Считаем текущий интервал: базовые 10 сек минус 1 сек за каждый уровень буста
     const currentSpawnInterval = BASE_SPAWN_INTERVAL - (upgrades.speed.level * 1000);
-
     const progress = Math.min(timePassed / currentSpawnInterval, 1);
     const offset = circleCircumference - (progress * circleCircumference);
     timerRing.style.strokeDashoffset = offset;
 
     if (timePassed >= currentSpawnInterval) {
-        timePassed = 0;
-        autoSpawn();
+        timePassed = 0; 
+        autoSpawn();    
     }
 }
+
+// === 📺 ИНТЕГРАЦИЯ НАСТОЯЩЕЙ РЕКЛАМЫ ADSGRAM С ВЫБОРОМ НАГРАДЫ ===
+function startRewardedAd(rewardType) {
+    // 1. Проверяем кулдаун (3 минуты)
+    const timeSinceLastAd = Date.now() - lastAdWatchTime;
+    if (timeSinceLastAd < ADS_COOLDOWN_TIME) {
+        return; 
+    }
+
+    // Закрываем поповер выбора награды
+    const choicePopup = document.getElementById('ads-choice-popup');
+    if (choicePopup) choicePopup.hidePopover();
+
+    // Проверяем, загрузился ли скрипт Adsgram SDK
+    if (!AdController) {
+        alert("Реклама временно недоступна. Пожалуйста, попробуйте позже.");
+        return;
+    }
+
+    // 2. Запускаем показ реального видеоролика на смартфоне
+    AdController.show().then((result) => {
+        // РЕКЛАМА УСПЕШНО ДОСМОТРЕНА ДО КОНЦА!
+        lastAdWatchTime = Date.now(); // Фиксируем время просмотра
+        
+        // Включаем звук успешной покупки/награды buySound
+        buySound.currentTime = 0;
+        buySound.play().catch(err => console.log(err));
+
+        if (rewardType === 'diamond') {
+            // Начисление 1 алмаза
+            diamonds += 1;
+            if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
+            spawnFloatingText("+1 💎", "50%", "50%");
+        } else if (rewardType === 'money') {
+            // Начисление денег за 15 минут игры (15 мин * 60 сек = 900 секунд)
+            const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
+            let totalValue = 0;
+            activeCards.forEach(card => { totalValue += Number(card.getAttribute('data-value')); });
+            const currentPPS = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+            
+            const moneyEarned = Math.round(currentPPS * 900);
+            if (moneyEarned > 0) {
+                updateBalance(moneyEarnings || moneyEarned);
+                spawnFloatingText(`+${formatNumber(moneyEarned)} $`, "50%", "50%");
+            } else {
+                // Страховка: если поле абсолютно пустое, дарим базовые 500 долларов, чтобы не обижать игрока
+                updateBalance(500);
+                spawnFloatingText("+500 $", "50%", "50%");
+            }
+        }
+
+        saveGame();
+    }).catch((result) => {
+        // Игрок закрыл видео раньше времени или произошла ошибка сети
+        console.log("Реклама не была досмотрена:", result);
+    });
+}
+
+// Обновление таймера перезарядки кнопки рекламы в реальном времени
+function updateAdsCooldownTimer() {
+    const btn = document.getElementById('ads-anchor');
+    if (!btn) return;
+
+    const timeSinceLastAd = Date.now() - lastAdWatchTime;
+
+    if (timeSinceLastAd < ADS_COOLDOWN_TIME) {
+        // Кулдаун активен: блокируем кнопку и считаем секунды
+        btn.classList.add('cooldown');
+        
+        const timeLeftMs = ADS_COOLDOWN_TIME - timeSinceLastAd;
+        const totalSecondsLeft = Math.ceil(timeLeftMs / 1000);
+        const mins = Math.floor(totalSecondsLeft / 60);
+        const secs = totalSecondsLeft % 60;
+        
+        // Красивый формат вывода (например, 2:05)
+        btn.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    } else {
+        // Кулдаун прошел: возвращаем иконку ТВ и включаем кнопку назад
+        if (btn.classList.contains('cooldown')) {
+            btn.classList.remove('cooldown');
+            btn.textContent = '📺';
+        }
+    }
+}
+
+// Запускаем постоянную проверку кулдауна кнопки рекламы (раз в секунду)
+setInterval(updateAdsCooldownTimer, 1000);
+
+// Сбалансированный чит-код разработчика
+let balanceClicks = 0;
+let lastBalanceClickTime = 0;
+const balanceBoardElement = document.querySelector('.balance-board');
+
+if (balanceBoardElement) {
+    balanceBoardElement.addEventListener('click', () => {
+        const currentTime = Date.now();
+        if (currentTime - lastBalanceClickTime < 400) {
+            balanceClicks++;
+        } else {
+            balanceClicks = 1;
+        }
+        lastBalanceClickTime = currentTime;
+
+        if (balanceClicks === 5) {
+            balanceClicks = 0;
+            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $ и 10 💎. Продолжить?")) {
+                localStorage.removeItem('clicker_game_save');
+                const freshState = {
+                    balance: 20000000,
+                    diamonds: 10,
+                    prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
+                    upgrades: { 
+                        offline: { level: 0, price: 2, maxLevel: 18 },
+                        tier: { level: 0, price: 5, maxLevel: 5 },
+                        speed: { level: 0, price: 1, maxLevel: 7 }
+                    },
+                    cards: [
+                        { value: 4, left: "20%", top: "30%" },
+                        { value: 4, left: "60%", top: "40%" }
+                    ],
+                    unlockedItems: [1, 2, 4],
+                    discoveredCards: [1, 2, 4],
+                    lastSaveTime: Date.now(),
+                    lastAdWatchTime: 0
+                };
+                localStorage.setItem('clicker_game_save', JSON.stringify(freshState));
+                location.reload();
+            }
+        }
+    });
+}
+
+
+
+
+
+
+
 
 function spawnFloatingText(text, leftStyle, topStyle, isPassive = false) {
     const fText = document.createElement('div');
@@ -436,68 +557,17 @@ function checkShopButtons() {
 
 function getRandomPercent(min, max) { return Math.random() * (max - min) + min; }
 
-// === ИСПРАВЛЕННАЯ МАТЕМАТИКА ЭВОЛЮЦИИ ТИРОВ ===
 function getRandomSpawnValue() {
     const rand = Math.random();
     let baseValue = 1;
     
-    // Твои вероятности: 50%, 30%, 20%
     if (rand < 0.5) baseValue = 1;       
     else if (rand < 0.8) baseValue = 2;       
     else baseValue = 4;                       
 
-    // Умножаем базу на 2 в степени уровня буста (уровень 0 = х1, уровень 1 = х2, уровень 2 = х4...)
     const multiplier = Math.pow(2, upgrades.tier.level);
     return baseValue * multiplier;
 }
-
-// Сбалансированный чит-код разработчика
-let balanceClicks = 0;
-let lastBalanceClickTime = 0;
-const balanceBoardElement = document.querySelector('.balance-board');
-
-if (balanceBoardElement) {
-    balanceBoardElement.addEventListener('click', () => {
-        const currentTime = Date.now();
-        if (currentTime - lastBalanceClickTime < 400) {
-            balanceClicks++;
-        } else {
-            balanceClicks = 1;
-        }
-        lastBalanceClickTime = currentTime;
-
-        if (balanceClicks === 5) {
-            balanceClicks = 0;
-            if (confirm("⚡ АКТИВАЦИЯ КОДА РАЗРАБОТЧИКА!\n\nСтарый сейв будет исправлен, а на баланс начислится компенсация 20,000,000 $ и 10 💎. Продолжить?")) {
-                localStorage.removeItem('clicker_game_save');
-                const freshState = {
-                    balance: 30000000,
-                    diamonds: 10, // Твой новый баланс алмазов в чите
-                    prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
-                    upgrades: { 
-                        offline: { level: 0, price: 2, maxLevel: 18 },
-                        tier: { level: 0, price: 5, maxLevel: 5 }
-                    },
-                    cards: [
-                        { value: 4, left: "20%", top: "30%" },
-                        { value: 4, left: "60%", top: "40%" }
-                    ],
-                    unlockedItems: [1, 2, 4],
-                    discoveredCards: [1, 2, 4],
-                    lastSaveTime: Date.now()
-                };
-                localStorage.setItem('clicker_game_save', JSON.stringify(freshState));
-                location.reload();
-            }
-        }
-    });
-}
-
-
-
-
-
-
 
 function createCard(value, customLeft = null, customTop = null, playSpawnAnim = true) {
     const currentCardsCount = document.querySelectorAll('.drag-item:not(.absorb-anim)').length;
@@ -566,6 +636,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         item.classList.remove('dragging');
         const touchDuration = Date.now() - touchStartTime;
         
+        // МОБИЛЬНЫЙ ТАП ПО КАРТОЧКЕ — Включаем clickSound
         if (touchDuration < 250 && !isMoving) {
             const cardValue = Number(item.getAttribute('data-value'));
             updateBalance(cardValue);
@@ -615,8 +686,11 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         const cardValue = Number(item.getAttribute('data-value'));
         updateBalance(cardValue);
         spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+        
+        // КЛИК НА ПК — Включаем clickSound
         clickSound.currentTime = 0;
         clickSound.play().catch(err => console.log(err));
+        
         calculatePPS(); 
         saveGame(); 
     });
@@ -676,6 +750,7 @@ function handleCardsMerge(targetCard, sourceCard) {
     updateBalance(mergeBonus);
     spawnFloatingText(`+${formatNumber(mergeBonus)} $`, targetCard.style.left, targetCard.style.top);
 
+    // СЛИЯНИЕ КАРТОЧЕК — Включаем mergeSound
     mergeSound.currentTime = 0;
     mergeSound.play().catch(error => console.log(error));
 
@@ -708,6 +783,11 @@ function buyCard(value) {
             updateBalance(-currentPrice);
             prices[value] = Math.round(currentPrice * 1.15);
             document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
+            
+            // УСПЕШНАЯ ПОКУПКА КАРТЫ — Включаем buySound
+            buySound.currentTime = 0;
+            buySound.play().catch(err => console.log(err));
+
             checkShopButtons();
             saveGame(); 
         }
@@ -740,6 +820,17 @@ sandbox.addEventListener('drop', (e) => {
         draggedElement.style.top = `${(newTop / sandbox.clientHeight) * 100}%`;
         
         saveGame(); 
+    }
+});
+
+// === 🔊 АВТОМАТИЧЕСКАЯ ОЗВУЧКА ОТКРЫТИЯ/ЗАКРЫТИЯ ОКОН ===
+['shop', 'upgrades-shop', 'ads-choice-popup'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('beforetoggle', () => {
+            openSound.currentTime = 0;
+            openSound.play().catch(err => console.log(err));
+        });
     }
 });
 
