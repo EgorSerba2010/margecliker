@@ -316,20 +316,31 @@ body {
 .drag-item.hovered { border-color: #ff9800; transform: scale(1.08) !important; z-index: 10; }
 
 /* Палитра */
-.val-1    { background-color: #a8dadc; color: #1d3557; }
-.val-2    { background-color: #117da1; color: white; }
-.val-4    { background-color: #1d3557; color: white; }
-.val-8    { background-color: #e07a5f; color: white; }
-.val-16   { background-color: #f4a261; color: white; }
-.val-32   { background-color: #e76f51; color: white; }
-.val-64   { background-color: #2a9d8f; color: white; }
-.val-128  { background-color: #e9c46a; color: #1d3557; }
-.val-256  { background-color: #9b5de5; color: white; }
-.val-512  { background-color: #f15bb5; color: white; }
-.val-1024 { background-color: #00bbf9; color: white; }
-.val-2048 { background-color: #00f5d4; color: #1d3557; }
-.val-4096 { background-image: linear-gradient(180deg, red, yellow, green, cyan, purple); color: #1d3557; }
-.val-high { background-color: #d62828; color: white; }
+.val-1    { background-color: #00e0f9; background-image: url(1.png);}
+.val-2    { background-color: #117da1; background-image: url(2.png); }
+.val-4    { background-color: #1d3557; background-image: url(4.png); }
+.val-8    { background-color: #a33b1e; background-image: url(8.png); }
+.val-16   { background-color: #f4a261; background-image: url(16.png); }
+.val-32   { background-color: #e76f51; background-image: url(32.png); }
+.val-64   { background-color: #2a9d8f; background-image: url(64.png); }
+.val-128  { background-color: #e9c46a; background-image: url(128.png); }
+.val-256  { background-color: #9b5de5; background-image: url(256.png); }
+.val-512  { background-color: #f15bb5; background-image: url(512.png); }
+.val-1024 { background-color: #00bbf9; background-image: url(1024.png); }
+.val-2048 { background-color: #00f5d4; background-image: url(2048.png); }
+.val-4096 { background-color: #435682; background-image: url(4096.png); }
+.val-high { background-color: #d62828; background-image: url(.png); }
+
+/* Общие правила для всех карточек, чтобы картинка идеально ложилась внутрь */
+.drag-item, .shop-item-preview, .drag-item-preview {
+    background-size: cover;       /* Растягивает картинку без искажений */
+    background-position: center;  /* Центрирует изображение */
+    background-repeat: no-repeat; /* Запрещает размножение картинки */
+    color: transparent !important; /*Прячет стандартный текст-цифру, чтобы он не мешал */
+    text-shadow: none !important; /* Убирает тень старого текста */
+    box-shadow: none;
+    filter: drop-shadow(0px 0px 5px rgba(0, 0, 0, 0.5));
+}
 
 /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
 @media (max-width: 620px) {
@@ -773,4 +784,260 @@ body {
         opacity: 0;
         transform: translateY(-20px);
     }
+}
+
+/* === СТИЛИ ДЛЯ ПЕРЕКЛЮЧАТЕЛЯ ПОЛЕЙ === */
+.field-tabs-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: -14px; /* Слегка прижимаем к полю */
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 5px;
+    font-size: 13px;
+    font-weight: bold;
+    background-color: #e2e8f0;
+    color: #475569;
+    border: 2px solid #cbd5e1;
+    border-bottom: none; /* Убираем нижнюю рамку, создавая эффект вкладки */
+    border-radius: 12px 12px 0 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Активная (выбранная) вкладка */
+.tab-btn.active {
+    background-color: #ffffff;
+    color: #2c3e50;
+    border-color: #ccc;
+    border-bottom: 2px solid #ffffff; /* Перекрывает верхнюю рамку контейнера */
+    transform: translateY(3px); /* Опускаем чуть ниже для визуальной склейки с полем */
+    z-index: 2;
+}
+
+/* Заблокированная вкладка */
+.tab-btn.locked-tab {
+    background-color: #cbd5e1;
+    color: #94a3b8;
+    border-color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.tab-range {
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.8;
+}
+
+/* Мобильная адаптация вкладок */
+@media (max-width: 620px) {
+    .tab-btn {
+        font-size: 11px;
+        padding: 8px 2px;
+    }
+    .tab-range {
+        font-size: 9px;
+    }
+}
+
+/* Кнопка вызова коллекции слева от баланса */
+#collection-anchor {
+    font-size: 24px;
+    background: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border: #e67e22 solid 3px; /* Красивый оранжевый ободок книжки */
+    display: flex;
+    justify-content: center;
+    transition: transform 0.1s;
+    flex-shrink: 0; /* Чтобы кнопка не сжималась на узких экранах */
+    box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.2);
+    text-shadow: 0px 0px 7px rgba(0, 0, 0, 0.5);
+}
+
+#collection-anchor:active {
+    transform: scale(0.9);
+}
+
+/* Специфический стиль для поповера коллекции */
+#collection-popup {
+    opacity: 0;
+    gap: 15px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 360px;
+    box-sizing: border-box;
+    transform: translateY(-20px);
+    transition: all 0.3s allow-discrete;
+    border: none;
+    flex-direction: column;
+}
+
+#collection-popup:popover-open {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#collection-popup::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
+}
+
+@starting-style {
+    #collection-popup:popover-open {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+/* Сетка коллекции 3хN */
+.collection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Ровно 3 колонки */
+    gap: 12px;
+    width: 100%;
+    max-height: 380px; /* Высота скролла, чтобы влезало много строк */
+    overflow-y: auto;
+    padding-right: 5px;
+    box-sizing: border-box;
+}
+
+/* Красивое оформление полосы скролла для коллекции */
+.collection-grid::-webkit-scrollbar { width: 6px; }
+.collection-grid::-webkit-scrollbar-track { background: #f1f2f6; border-radius: 10px; }
+.collection-grid::-webkit-scrollbar-thumb { background: #ced6e0; border-radius: 10px; }
+
+/* Слот отдельной карточки в альбоме */
+.collection-slot {
+    aspect-ratio: 1 / 1; /* Делает слот идеально квадратным */
+    border-radius: 10px;
+    /* background-color: #f1f2f6; */
+    border: 2px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: transform 0.1s, border-color 0.2s;
+}
+
+.collection-slot:active {
+    transform: scale(0.95);
+}
+
+/* Если карточка ЕЩЕ НЕ ОТКРЫТА (заблокирована) */
+.collection-slot.locked-card {
+    background-image: none !important; /* Убираем картинку, если она прописана в val-X */
+    background-color: #cbd5e1 !important;
+    border-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Знак вопроса внутри закрытой карты */
+.collection-slot.locked-card::after {
+    content: "?";
+    font-size: 28px;
+    font-weight: bold;
+    color: #64748b;
+}
+
+/* Финальный стиль для окна детального просмотра */
+#card-details-popup {
+    opacity: 0;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    width: 85%;
+    max-width: 320px;
+    box-sizing: border-box;
+    transform: translateY(-50px);
+    transition: all 0.3s allow-discrete;
+    border: solid 2px #00bbf9;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: auto; /* <-- КРИТИЧЕСКИ ВАЖНО: центрирует окно намертво поверх альбома */
+}
+
+#card-details-popup:popover-open {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#card-details-popup::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+@starting-style {
+    #card-details-popup:popover-open {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+/* Красивый подзаголовок разделения этапов внутри коллекции */
+.collection-stage-title {
+    grid-column: span 3; /* Растягиваем заголовок на все 3 колонки ширины */
+    font-size: 11px;
+    font-weight: 800;
+    color: #94a3b8; /* Спокойный серо-синий цвет */
+    letter-spacing: 1.5px;
+    text-align: center;
+    margin: 15px 0 5px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #e2e8f0; /* Пунктирная линия снизу */
+}
+
+/* Убираем верхний отступ у самого первого заголовка, чтобы не прилипал к шапке */
+.collection-grid .collection-stage-title:first-child { margin-top: 5px; }
+
+/* Специальный сочный стиль для всплывающего текста КРИТИЧЕСКОГО клика */
+.floating-text.crit-text {
+    color: #ff3333 !important; /* Насыщенный красный */
+    font-size: 16px; /* Крупнее обычного */
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(255, 51, 51, 0.6), 2px 2px 3px rgba(0, 0, 0, 0.5);
+    animation: floatUpAndFade 1.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* Чуть быстрее улетает вверх */
+}
+
+/* Золотой индикатор активного х2 буста */
+.double-income-timer {
+    font-size: 13px;
+    font-weight: 800;
+    color: #f39c12;
+    background: #fef9e7;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px dashed #f1c40f;
+    margin-top: 2px;
+    display: inline-block;
+    animation: pulseGoldTimer 1.5s infinite alternate;
+}
+
+@keyframes pulseGoldTimer {
+    0% { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(1.03); opacity: 1; }
 }

@@ -31,6 +31,63 @@ if (window.Adsgram) {
     alert("КРИТИЧЕСКАЯ ОШИБКА: Телефон не смог загрузить скрипт sad.min.js из HTML!");
 }
 
+// === БАЗА ДАННЫХ КОЛЛЕКЦИИ КАРТОЧЕК ===
+// Сюда ты можешь вписать любые свои названия и описания для каждого тира
+const CARDS_DATABASE = {
+    1: {
+        name: "Черемша",
+        desc: "Тихо, не спеша, не шурша, четыре карандаша..."
+    },
+    2: {
+        name: "Семакина",
+        desc: "М - это модный. В - это весёлый. Г - государственный. У - улётный. ЖЖЖЖЖЖЖ"
+    },
+    4: {
+        name: "Токсис",
+        desc: "Возьми телефон, детка. Я знаю, ты хочешь позвонить мне сегодня."
+    },
+    8: {
+        name: "Поганец",
+        desc: "Поганец."
+    },
+    16: {
+        name: "Там не так поётся",
+        desc: "Никто никогда не узнает как там поётся."
+    },
+    32: {
+        name: "Буба",
+        desc: "Ну он просто мега крут. Легенда детства."
+    },
+    64: {
+        name: "Макс Ферстаппен",
+        desc: "ТУ ТУ ДУ ДУ МАКС ФЕРСТАПЕН."
+    },
+    128: {
+        name: "Банана Леклер",
+        desc: "Nothing, just an inchident on the race."
+    },
+    256: {
+        name: "Акула бизнеса",
+        desc: "Видит тренды насквозь. Может продать воздух и завернуть его в красивую обертку."
+    },
+    512: {
+        name: "Техно-гений",
+        desc: "Создал искусственный интеллект, который сам кликает по карточкам за него."
+    },
+    1024: {
+        name: "Владелец корпорации",
+        desc: "Его подпись стоит на миллиардных контрактах. Почти прошел Поле 2."
+    },
+    2048: {
+        name: "Повелитель Экономики",
+        desc: "Легендарная карта второго цеха. Открывает врата в высшую лигу."
+    },
+    4096: {
+        name: "Император Галактики",
+        desc: "Основатель Поля 3. Его богатство невозможно измерить обычными цифрами."
+    }
+};
+
 
 let prices = {
     1: 10,
@@ -49,7 +106,8 @@ let prices = {
 let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
     tier: { level: 0, price: 5, maxLevel: 5 },
-    speed: { level: 0, price: 1, maxLevel: 7 }
+    speed: { level: 0, price: 1, maxLevel: 7 },
+    crit: { level: 0, price: 1, maxLevel: 20 }
 };
 
 let unlockedItems = [1, 2, 4];
@@ -57,8 +115,10 @@ let discoveredCards = [1, 2, 4];
 
 let balance = 100;
 let diamonds = 0;
+let currentField = 1; // По умолчанию игрок находится на 1-м поле
 let lastAdWatchTime = 0; // Таймстамп последнего успешного просмотра ТВ
 let selectedAdRewardType = null; // Какую награду выбрал игрок ('diamond' или 'money')
+let doubleIncomeUntil = 0; // Время в мс, до которого активен х2 доход
 
 // Переменные для Drag and Drop / Touch
 let offsetX = 0;
@@ -96,6 +156,8 @@ function formatOfflineTime(seconds) {
 function checkCardUnlocks(value) {
     if (discoveredCards.includes(value)) return;
     discoveredCards.push(value);
+
+    updateFieldTabsUI();
 
     let targetToUnlock = 0;
     let shopOpenedANewItem = false;
@@ -176,6 +238,12 @@ function checkUpgradeButtons() {
     if (btnSpeed) {
         btnSpeed.disabled = upgrades.speed.level >= upgrades.speed.maxLevel || diamonds < upgrades.speed.price;
     }
+
+    const btnCrit = document.getElementById('buy-boost-crit-btn');
+    if (btnCrit) {
+        btnCrit.disabled = upgrades.crit.level >= upgrades.crit.maxLevel || diamonds < upgrades.crit.price;
+    }
+
 }
 
 function updateUpgradeUI() {
@@ -212,6 +280,17 @@ function updateUpgradeUI() {
         }
     }
 
+    const critLvlEl = document.getElementById('boost-crit-lvl');
+    const critPriceEl = document.getElementById('price-boost-crit');
+    if (critLvlEl) critLvlEl.textContent = upgrades.crit.level;
+    if (critPriceEl) {
+        if (upgrades.crit.level >= upgrades.crit.maxLevel) {
+            critPriceEl.parentNode.innerHTML = "MAX";
+        } else {
+            critPriceEl.textContent = upgrades.crit.price;
+        }
+    }
+
     checkUpgradeButtons();
 }
 
@@ -235,11 +314,23 @@ function buyUpgrade(type) {
 }
 
 function saveGame() {
-    const cardsData = [];
+    // Получаем ранее сохраненные карты других полей, чтобы не стереть их
+    let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+    const savedData = localStorage.getItem('clicker_game_save');
+    if (savedData) {
+        try {
+            const parsed = JSON.parse(savedData);
+            if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+        } catch(e) {}
+    }
+
+    // Сохраняем карты с текущего экрана в их законное поле
+    const currentFieldKey = `field_${currentField}`;
+    allFieldsCards[currentFieldKey] = [];
+
     const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
-    
     activeCards.forEach(card => {
-        cardsData.push({
+        allFieldsCards[currentFieldKey].push({
             value: Number(card.getAttribute('data-value')),
             left: card.style.left,
             top: card.style.top
@@ -251,23 +342,25 @@ function saveGame() {
         diamonds: diamonds,
         prices: prices, 
         upgrades: upgrades,
-        cards: cardsData,
+        cardsByFields: allFieldsCards, // Сохраняем разделенные по полям карты
+        currentField: currentField,     // Запоминаем, на каком поле вышел игрок
         unlockedItems: unlockedItems,
         discoveredCards: discoveredCards,
         lastSaveTime: Date.now(),
-        lastAdWatchTime: lastAdWatchTime // Сохраняем кулдаун ТВ в память смартфона
+        lastAdWatchTime: lastAdWatchTime,
+        doubleIncomeUntil: doubleIncomeUntil
     };
     localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
 }
 
 function loadGame() {
     const savedData = localStorage.getItem('clicker_game_save');
+
     if (savedData) {
         try {
             const gameState = JSON.parse(savedData);
             balance = gameState.balance;
             prices = gameState.prices;
-            
             diamonds = gameState.diamonds || 0;
             if (diamondsValueEl) diamondsValueEl.textContent = formatNumber(diamonds);
 
@@ -275,14 +368,14 @@ function loadGame() {
                 upgrades.offline.level = gameState.upgrades.offline ? gameState.upgrades.offline.level : 0;
                 if (gameState.upgrades.tier) upgrades.tier.level = gameState.upgrades.tier.level;
                 if (gameState.upgrades.speed) upgrades.speed.level = gameState.upgrades.speed.level;
+                if (gameState.upgrades.crit) upgrades.crit.level = gameState.upgrades.crit.level;
             }
             updateUpgradeUI();
 
             if (gameState.unlockedItems) unlockedItems = gameState.unlockedItems;
             if (gameState.discoveredCards) discoveredCards = gameState.discoveredCards;
-            
-            // Восстанавливаем кулдаун ТВ
             lastAdWatchTime = gameState.lastAdWatchTime || 0;
+            doubleIncomeUntil = gameState.doubleIncomeUntil || 0;
 
             Object.keys(prices).forEach(val => {
                 const priceEl = document.getElementById(`price-${val}`);
@@ -290,24 +383,34 @@ function loadGame() {
             });
 
             refreshShopVisibility();
-
             sandbox.innerHTML = '';
-            gameState.cards.forEach(cardInfo => {
-                createCard(cardInfo.value, cardInfo.left, cardInfo.top, false); 
-            });
+
+            // Отрисовываем карты ТОЛЬКО для текущего активного поля
+            if (gameState.cardsByFields) {
+                const currentFieldKey = `field_${currentField}`;
+                const fieldCards = gameState.cardsByFields[currentFieldKey] || [];
+                fieldCards.forEach(cardInfo => {
+                    createCard(cardInfo.value, cardInfo.left, cardInfo.top, false); 
+                });
+            }
             
             calculatePPS();
             checkShopButtons();
 
-            // РАСЧЕТ ОФФЛАЙН ДОХОДА
+            // РАСЧЕТ ОФФЛАЙН ДОХОДА (Считает доход со ВСЕХ полей сразу!)
             if (gameState.lastSaveTime) {
                 const timeDiffMs = Date.now() - gameState.lastSaveTime;
                 let secondsPassed = Math.floor(timeDiffMs / 1000);
 
                 if (secondsPassed > 10) {
-                    let totalValue = 0;
-                    gameState.cards.forEach(c => totalValue += c.value);
-                    const currentPPS = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+                    let totalValueAllFields = 0;
+                    if (gameState.cardsByFields) {
+                        Object.values(gameState.cardsByFields).forEach(fieldList => {
+                            fieldList.forEach(c => totalValueAllFields += c.value);
+                        });
+                    }
+                    
+                    const currentPPS = totalValueAllFields / (PASSIVE_INCOME_INTERVAL / 1000);
 
                     if (currentPPS > 0) {
                         let actualOfflineSeconds = secondsPassed;
@@ -338,6 +441,8 @@ function loadGame() {
             }
 
             balanceValueEl.textContent = formatNumber(balance);
+
+            updateFieldTabsUI();
             return true;
         } catch (e) {
             console.error(e);
@@ -345,6 +450,7 @@ function loadGame() {
     }
     return false; 
 }
+
 
 function hardResetGame() {
     if (confirm("Вы уверены, что хотите полностью обнулить игру и удалить сохранение?")) {
@@ -414,6 +520,13 @@ function startRewardedAd(rewardType) {
                 updateBalance(500);
                 spawnFloatingText("+500 $", "50%", "50%");
             }
+        } else if (rewardType === 'double') {
+            // Если буст уже тикал, прибавляем к нему, если нет — стартуем от текущего времени
+            const baseTime = Math.max(doubleIncomeUntil, Date.now());
+            doubleIncomeUntil = baseTime + (2 * 60 * 60 * 1000); // +2 часа в мс
+            
+            spawnFloatingText("ЗОЛОТОЙ ВЕК: х2 ДОХОД!", "50%", "50%");
+            calculatePPS(); // Сразу обновляем цифры дохода на экране
         }
 
         saveGame();
@@ -453,11 +566,16 @@ function updateAdsCooldownTimer() {
 // Запускаем постоянную проверку кулдауна кнопки рекламы (раз в секунду)
 setInterval(updateAdsCooldownTimer, 1000);
 
-// Сбалансированный чит-код разработчика
+function getFieldForValue(value) {
+    if (value <= 32) return 1;
+    if (value >= 64 && value <= 2048) return 2;
+    return 3; // Для 4096 и выше
+}
+
+// чит-код разработчика
 let balanceClicks = 0;
 let lastBalanceClickTime = 0;
 const balanceBoardElement = document.querySelector('.balance-board');
-
 if (balanceBoardElement) {
     balanceBoardElement.addEventListener('click', () => {
         const currentTime = Date.now();
@@ -479,7 +597,8 @@ if (balanceBoardElement) {
                     upgrades: { 
                         offline: { level: 0, price: 2, maxLevel: 18 },
                         tier: { level: 0, price: 5, maxLevel: 5 },
-                        speed: { level: 0, price: 1, maxLevel: 7 }
+                        speed: { level: 0, price: 1, maxLevel: 7 },
+                        crit: { level: 0, price: 1, maxLevel: 20 }
                     },
                     cards: [
                         { value: 4, left: "20%", top: "30%" },
@@ -499,14 +618,14 @@ if (balanceBoardElement) {
 
 
 
-
-
-
-
-
-function spawnFloatingText(text, leftStyle, topStyle, isPassive = false) {
+function spawnFloatingText(text, leftStyle, topStyle, isPassive = false, isCrit = false) {
     const fText = document.createElement('div');
     fText.className = 'floating-text' + (isPassive ? ' passive' : '');
+
+    // Определяем правильный класс для анимации текста
+    if (isCrit) fText.className = 'floating-text crit-text';
+    else fText.className = 'floating-text' + (isPassive ? ' passive' : '');
+
     fText.textContent = text;
     fText.style.left = `calc(${leftStyle} + 12px)`;
     fText.style.top = `calc(${topStyle} - 10px)`;
@@ -515,12 +634,73 @@ function spawnFloatingText(text, leftStyle, topStyle, isPassive = false) {
 }
 
 function calculatePPS() {
-    const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
     let totalValue = 0;
+
+    // Считаем карточки на текущем экране
+    const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
     activeCards.forEach(card => { totalValue += Number(card.getAttribute('data-value')); });
-    const pps = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+
+    // Достаем из памяти карты остальных (скрытых) полей, чтобы учесть их доход
+    const savedData = localStorage.getItem('clicker_game_save');
+    if (savedData) {
+        try {
+            const parsed = JSON.parse(savedData);
+            if (parsed.cardsByFields) {
+                Object.keys(parsed.cardsByFields).forEach(fieldKey => {
+                    // Пропускаем текущее поле, так как его карты мы уже посчитали выше вживую
+                    if (fieldKey !== `field_${currentField}`) {
+                        parsed.cardsByFields[fieldKey].forEach(c => totalValue += c.value);
+                    }
+                });
+            }
+        } catch(e) {}
+    }
+
+    let pps = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+
+    // ЕСЛИ ЗОЛОТОЙ ВЕК АКТИВЕН — УМНОЖАЕМ ВЕСЬ ДОХОД В СЕКУНДУ НА 2!
+    if (doubleIncomeUntil > Date.now()) {
+        pps = pps * 2;
+    }
+
     ppsValueEl.textContent = formatNumber(Number(pps.toFixed(1)));
 }
+
+function updateDoubleIncomeTimerUI() {
+    let ppsCounterEl = document.querySelector('.pps-counter');
+    if (!ppsCounterEl) return;
+
+    let timerEl = document.getElementById('gold-boost-timer');
+    const timeLeftMs = doubleIncomeUntil - Date.now();
+
+    if (timeLeftMs > 0) {
+        // Если буст активен, а тега еще нет на экране — создаем его
+        if (!timerEl) {
+            timerEl = document.createElement('div');
+            timerEl.id = 'gold-boost-timer';
+            timerEl.className = 'double-income-timer';
+            ppsCounterEl.parentNode.appendChild(timerEl);
+        }
+
+        // Переводим миллисекунды в формат ЧЧ:ММ:СС
+        const totalSecs = Math.floor(timeLeftMs / 1000);
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+
+        const pad = (num) => num < 10 ? '0' + num : num;
+        timerEl.textContent = `⚡ х2 Доход: ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+    } else {
+        // Если время вышло — удаляем таймер с экрана
+        if (timerEl) {
+            timerEl.remove();
+            calculatePPS(); // Пересчитываем доход обратно в нормальный режим
+        }
+    }
+}
+
+// Запускаем ежесекундное обновление золотого таймера
+setInterval(updateDoubleIncomeTimerUI, 1000);
 
 function collectPassiveIncome() {
     const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
@@ -529,10 +709,17 @@ function collectPassiveIncome() {
     activeCards.forEach(card => {
         const cardValue = Number(card.getAttribute('data-value'));
         totalPassiveTurn += cardValue;
-        spawnFloatingText(`+${formatNumber(cardValue)}`, card.style.left, card.style.top, true);
+        
+        // Всплывающий текст тоже покажет х2 сумму, если буст активен
+        const isDouble = doubleIncomeUntil > Date.now();
+        spawnFloatingText(`+${formatNumber(isDouble ? cardValue * 2 : cardValue)}`, card.style.left, card.style.top, true);
     });
 
     if (totalPassiveTurn > 0) {
+        // Умножаем итоговое начисление на баланс
+        if (doubleIncomeUntil > Date.now()) {
+            totalPassiveTurn = totalPassiveTurn * 2;
+        }
         updateBalance(totalPassiveTurn);
         saveGame();
     }
@@ -647,11 +834,22 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         item.classList.remove('dragging');
         const touchDuration = Date.now() - touchStartTime;
         
-        // МОБИЛЬНЫЙ ТАП ПО КАРТОЧКЕ — Включаем clickSound
+        // МОБИЛЬНЫЙ ТАП ПО КАРТОЧКЕ — Включаем clickSound и считаем КРИТ
         if (touchDuration < 250 && !isMoving) {
             const cardValue = Number(item.getAttribute('data-value'));
-            updateBalance(cardValue);
-            spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+            
+            // Расчет критического удара
+            const critChance = (upgrades.crit ? upgrades.crit.level : 0) * 5; // Например, 3 ур * 5 = 15%
+            const isCritHit = (Math.random() * 100) < critChance;
+            
+            if (isCritHit) {
+                const critValue = cardValue * 10;
+                updateBalance(critValue);
+                spawnFloatingText(`+${formatNumber(critValue)} $`, item.style.left, item.style.top, false, true);
+            } else {
+                updateBalance(cardValue);
+                spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+            }
             
             clickSound.currentTime = 0;
             clickSound.play().catch(err => console.log(err));
@@ -695,8 +893,19 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         item.classList.add('click-anim');
         setTimeout(() => { item.classList.remove('click-anim'); }, 150);
         const cardValue = Number(item.getAttribute('data-value'));
-        updateBalance(cardValue);
-        spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+        
+        // Расчет критического удара для ПК
+        const critChance = (upgrades.crit ? upgrades.crit.level : 0) * 5;
+        const isCritHit = (Math.random() * 100) < critChance;
+        
+        if (isCritHit) {
+            const critValue = cardValue * 10;
+            updateBalance(critValue);
+            spawnFloatingText(`+${formatNumber(critValue)} $`, item.style.left, item.style.top, false, true);
+        } else {
+            updateBalance(cardValue);
+            spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+        }
         
         // КЛИК НА ПК — Включаем clickSound
         clickSound.currentTime = 0;
@@ -732,6 +941,19 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         }
     });
 
+    // Проверяем, соответствует ли создаваемая карта текущему экрану поля
+    const targetField = getFieldForValue(value);
+    
+    // Привязываем номер поля к самому HTML-элементу карточки
+    item.setAttribute('data-field', targetField);
+
+    // Если карта создана для другого поля, не добавляем её на текущий экран
+    if (targetField !== currentField) {
+        // Мы вернем true, чтобы логика покупки/спавна сработала, но на экран её не выводим
+        calculatePPS();
+        return true; 
+    }
+
     sandbox.appendChild(item);
     calculatePPS(); 
     return true;
@@ -749,19 +971,93 @@ function handleCardsMerge(targetCard, sourceCard) {
     setTimeout(() => { 
         sourceCard.remove(); 
         calculatePPS(); 
-        saveGame(); 
     }, 200);
 
     targetCard.setAttribute('data-value', totalSum);
     targetCard.textContent = totalSum;
 
+    // Сначала регистрируем открытие новой карты в игре
     checkCardUnlocks(totalSum);
 
+    // === ИСПРАВЛЕННЫЙ БЛОК АВТОПЕРЕНОСА КАРТЫ ===
+    const correctField = getFieldForValue(totalSum);
+    const currentCardField = Number(targetCard.getAttribute('data-field'));
+
+    if (correctField !== currentCardField) {
+        targetCard.classList.add('absorb-anim');
+        
+        // Нам нужно вытащить текущие сохранения, чтобы дописать карту на другое поле
+        let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+        const savedData = localStorage.getItem('clicker_game_save');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+            } catch(e) {}
+        }
+
+        // ЖЕСТКО ЗАПИСЫВАЕМ КАРТУ В ПРАВИЛЬНОЕ ПОЛЕ В ПАМЯТЬ!
+        const targetFieldKey = `field_${correctField}`;
+        allFieldsCards[targetFieldKey].push({
+            value: totalSum,
+            left: `${getRandomPercent(5, 75)}%`, // Даем ей случайные координаты на новом поле
+            top: `${getRandomPercent(5, 80)}%`
+        });
+
+        // Срочно удаляем её с текущего экрана и сохраняем обновленную базу данных
+        setTimeout(() => {
+            targetCard.remove();
+            
+            // Сохраняем все поля, учитывая добавленную карту
+            const currentFieldKey = `field_${currentField}`;
+            allFieldsCards[currentFieldKey] = [];
+            const remainingCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
+            remainingCards.forEach(card => {
+                allFieldsCards[currentFieldKey].push({
+                    value: Number(card.getAttribute('data-value')),
+                    left: card.style.left,
+                    top: card.style.top
+                });
+            });
+
+            const gameState = { 
+                balance: balance, 
+                diamonds: diamonds,
+                prices: prices, 
+                upgrades: upgrades,
+                cardsByFields: allFieldsCards,
+                currentField: currentField,
+                unlockedItems: unlockedItems,
+                discoveredCards: discoveredCards,
+                lastSaveTime: Date.now(),
+                lastAdWatchTime: lastAdWatchTime
+            };
+            localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
+            
+            calculatePPS();
+            
+            // Обновляем визуальные замочки на вкладках прямо сейчас
+            updateFieldTabsUI();
+            
+            alert(`🎉 Карточка ${formatNumber(totalSum)} успешно отправлена на Поле ${correctField}!`);
+        }, 200);
+        
+        // Начисляем деньги за слияние
+        const mergeBonus = totalSum * 5;
+        updateBalance(mergeBonus);
+        spawnFloatingText(`+${formatNumber(mergeBonus)} $`, targetCard.style.left, targetCard.style.top);
+        
+        mergeSound.currentTime = 0;
+        mergeSound.play().catch(error => console.log(error));
+        return; 
+    }
+    // === КОНЕЦ БЛОКА АВТОПЕРЕНОСА ===
+
+    // Обычное слияние карт внутри одного поля (ваш старый код)
     const mergeBonus = totalSum * 5;
     updateBalance(mergeBonus);
     spawnFloatingText(`+${formatNumber(mergeBonus)} $`, targetCard.style.left, targetCard.style.top);
 
-    // СЛИЯНИЕ КАРТОЧЕК — Включаем mergeSound
     mergeSound.currentTime = 0;
     mergeSound.play().catch(error => console.log(error));
 
@@ -775,6 +1071,48 @@ function handleCardsMerge(targetCard, sourceCard) {
         calculatePPS();
         saveGame(); 
     }, 300);
+}
+
+function updateFieldTabsUI() {
+    // Поле 2 открывается, если открыта хотя бы "64"
+    const tab2 = document.getElementById('tab-field-2');
+    if (tab2 && discoveredCards.some(val => val >= 64)) {
+        tab2.disabled = false;
+        tab2.classList.remove('locked-tab');
+        tab2.innerHTML = `Поле 2 <span class="tab-range">(64-2к)</span>`;
+    }
+    // Поле 3 открывается, если открыта хотя бы "4096"
+    const tab3 = document.getElementById('tab-field-3');
+    if (tab3 && discoveredCards.some(val => val >= 4096)) {
+        tab3.disabled = false;
+        tab3.classList.remove('locked-tab');
+        tab3.innerHTML = `Поле 3 <span class="tab-range">(4к+)</span>`;
+    }
+}
+
+function switchField(fieldNumber) {
+    if (fieldNumber === currentField) return;
+
+    // Сначала принудительно сохраняем всё, что сейчас есть на экране
+    saveGame();
+
+    // Меняем номер текущего активного поля
+    currentField = fieldNumber;
+
+    // Переключаем классы активности у кнопок вкладок
+    for (let i = 1; i <= 3; i++) {
+        const tab = document.getElementById(`tab-field-${i}`);
+        if (tab) {
+            if (i === currentField) tab.classList.add('active');
+            else tab.classList.remove('active');
+        }
+    }
+
+    // Полностью очищаем игровое поле от старых карточек
+    sandbox.innerHTML = '';
+
+    // Перезагружаем игру из памяти, чтобы loadGame отрисовал только карты для нового поля
+    loadGame();
 }
 
 function autoSpawn() {
@@ -803,6 +1141,98 @@ function buyCard(value) {
             saveGame(); 
         }
     }
+}
+
+// Функция автоматической генерации сетки альбома коллекции с разделением по этапам
+function renderCollectionGrid() {
+    const gridContainer = document.getElementById('collection-grid-container');
+    if (!gridContainer) return;
+
+    // Полностью очищаем сетку перед созданием
+    gridContainer.innerHTML = '';
+
+    // Берем все номиналы строго по порядку из нашей базы данных
+    const allNominals = Object.keys(CARDS_DATABASE).map(Number).sort((a, b) => a - b);
+
+    allNominals.forEach((value, index) => {
+        // === ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ ПО 6 КАРТОЧЕК ===
+        // Перед самой первой карточкой (индекс 0) вставляем заголовок первого поля
+        if (index === 0) {
+            const header = document.createElement('div');
+            header.className = 'collection-stage-title';
+            header.textContent = "ПОЛЕ 1 • НАЧАЛО ПУТИ";
+            gridContainer.appendChild(header);
+        }
+        // Перед седьмой карточкой (индекс 6) вставляем заголовок второго поля
+        else if (index === 6) {
+            const header = document.createElement('div');
+            header.className = 'collection-stage-title';
+            header.textContent = "ПОЛЕ 2 • КРИПТО-ЭРА";
+            gridContainer.appendChild(header);
+        }
+        // Перед тринадцатой карточкой (индекс 12) вставляем заголовок третьего поля
+        else if (index === 12) {
+            const header = document.createElement('div');
+            header.className = 'collection-stage-title';
+            header.textContent = "ПОЛЕ 3 • ВЫСШАЯ ЛИГА";
+            gridContainer.appendChild(header);
+        }
+
+        // Создаем сам слот для карточки (этот код у тебя уже был)
+        const slot = document.createElement('div');
+        slot.className = 'collection-slot';
+
+        const isDiscovered = discoveredCards.includes(value);
+
+        if (isDiscovered) {
+            slot.classList.add(`val-${value}`);
+            slot.onclick = () => openCardDetails(value);
+        } else {
+            slot.classList.add('locked-card');
+        }
+
+        gridContainer.appendChild(slot);
+    });
+}
+
+
+// Функция открытия детального поповера с твоим описанием
+function openCardDetails(value) {
+    const cardData = CARDS_DATABASE[value];
+    if (!cardData) return;
+
+    const detailsPopup = document.getElementById('card-details-popup');
+    const detailsName = document.getElementById('details-card-name');
+    const detailsValue = document.getElementById('details-card-value');
+    const detailsImage = document.getElementById('details-card-image');
+    const detailsDesc = document.getElementById('details-card-desc');
+
+    if (detailsPopup && detailsName && detailsValue && detailsImage && detailsDesc) {
+        // Подставляем название и номинал
+        detailsName.textContent = cardData.name.toUpperCase();
+        detailsValue.textContent = `Номинал: ${formatNumber(value)}`;
+        
+        // Подставляем описание
+        detailsDesc.textContent = cardData.desc;
+        
+        // Красим блок превью в класс нашей карточки, чтобы там отобразилась нужная картинка
+        detailsImage.className = 'drag-item-preview'; // сброс старых классов
+        updateCardColorClass(detailsImage, value);
+
+        // Открываем поповер поверх коллекции
+        detailsPopup.showPopover();
+    }
+}
+
+// Связываем открытие поповера коллекции с автоматической перерисовкой сетки
+const collectionPopupEl = document.getElementById('collection-popup');
+if (collectionPopupEl) {
+    collectionPopupEl.addEventListener('beforetoggle', (event) => {
+        // Рендерим сетку только в момент, когда поповер именно ОТКРЫВАЕТСЯ
+        if (event.newState === 'open') {
+            renderCollectionGrid();
+        }
+    });
 }
 
 sandbox.addEventListener('dragover', (e) => { e.preventDefault(); });
@@ -849,8 +1279,6 @@ sandbox.addEventListener('drop', (e) => {
 refreshShopVisibility();
 updateUpgradeUI();
 const loaded = loadGame();
-if (!loaded) {
-    autoSpawn();
-}
+if (!loaded) autoSpawn();
 setInterval(updateTimerIndicator, timerStep);
 setInterval(collectPassiveIncome, PASSIVE_INCOME_INTERVAL);
