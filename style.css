@@ -1046,7 +1046,7 @@ body {
 /* ПОЛНОСТЬЮ ОБНОВЛЕННЫЙ СТИЛЬ ШИРОКОЙ КНОПКИ-ПОЛОСЫ */
 #leaderboard-anchor {
     position: absolute;
-    top: 102px;
+    top: 99px;
     left: 30%;
     width: 40%;
     max-width: 600px; /* Идеально совпадает с шириной игрового поля */
