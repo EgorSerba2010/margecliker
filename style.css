@@ -20,7 +20,7 @@ body {
 .top-bar {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 5px;
     justify-content: center;
     width: 100%;
 }
@@ -56,6 +56,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 999;
 }
 
 .progress-ring {
@@ -1040,4 +1041,144 @@ body {
 @keyframes pulseGoldTimer {
     0% { transform: scale(1); opacity: 0.9; }
     100% { transform: scale(1.03); opacity: 1; }
+}
+
+/* ПОЛНОСТЬЮ ОБНОВЛЕННЫЙ СТИЛЬ ШИРОКОЙ КНОПКИ-ПОЛОСЫ */
+#leaderboard-anchor {
+    position: absolute;
+    top: 102px;
+    left: 30%;
+    width: 40%;
+    max-width: 600px; /* Идеально совпадает с шириной игрового поля */
+    padding: 5px;    /* Делаем кнопку сочной и удобной для тапа */
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff; /* Белый текст */
+    /* Красивый золотисто-оранжевый градиент */
+    background: linear-gradient(135deg, #f1c40f, #e67e22);
+    border: none !important;
+    border-radius: 14px; /* Убираем 50% круга, делаем мягкие прямоугольные углы */
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(230, 126, 34, 0.15);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.1s, box-shadow 0.1s;
+    /* Сбрасываем старые ограничения круглой кнопки */
+    box-sizing: border-box;
+}
+
+#leaderboard-anchor:hover {
+    background: linear-gradient(135deg, #f39c12, #d35400) !important;
+}
+
+#leaderboard-anchor:active {
+    transform: scale(0.98); /* Упругое сжатие всей полосы при клике */
+    box-shadow: 0 2px 5px rgba(230, 126, 34, 0.1);
+}
+
+/* === ОБНОВЛЕННЫЙ СТИЛЬ ОКНА РЕЙТИНГА С АНИМАЦИЕЙ ВЫЛЕТА === */
+#leaderboard-popup {
+    opacity: 0;
+    gap: 15px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 24px; /* Мягкие закругленные углы */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 360px; /* Идеальный мобильный размер */
+    box-sizing: border-box;
+    border: none;
+    flex-direction: column;
+    align-items: center;
+    
+    /* Эффект вылета: изначально окно смещено вниз на 40px и уменьшено */
+    transform: translateY(40px) scale(0.92);
+    transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2), transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2), display 0.3s allow-discrete;
+}
+
+/* Эффект, когда окно рейтинга открывается */
+#leaderboard-popup:popover-open {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0) scale(1); /* Возвращается в центр экрана и нормальный размер */
+}
+
+/* Плавное размытие фона за окном */
+#leaderboard-popup::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease, display 0.3s allow-discrete;
+}
+
+#leaderboard-popup:popover-open::backdrop {
+    opacity: 1;
+}
+
+/* Начальное состояние анимации для браузера */
+@starting-style {
+    #leaderboard-popup:popover-open {
+        opacity: 0;
+        transform: translateY(40px) scale(0.92);
+    }
+    #leaderboard-popup:popover-open::backdrop {
+        opacity: 0;
+    }
+}
+
+/* === ВНУТРЕННИЕ СТИЛИ СПИСКА (Оставляем чистыми и аккуратными) === */
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 5px;
+    box-sizing: border-box;
+}
+
+/* Полоса прокрутки для топа */
+.leaderboard-list::-webkit-scrollbar { width: 6px; }
+.leaderboard-list::-webkit-scrollbar-track { background: #f1f2f6; border-radius: 10px; }
+.leaderboard-list::-webkit-scrollbar-thumb { background: #ced6e0; border-radius: 10px; }
+
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.leader-place {
+    font-size: 16px;
+    font-weight: bold;
+    width: 30px;
+    flex-shrink: 0;
+}
+
+.leader-name {
+    font-weight: 600;
+    color: #2c3e50;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leader-score {
+    font-weight: 600;
+    color: #27ae60;
+}
+
+.leaderboard-row.user-row {
+    background: #fff9e7;
+    border-color: #f1c40f;
+    box-shadow: 0 2px 6px rgba(241, 196, 15, 0.15);
 }

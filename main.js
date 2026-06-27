@@ -1,3 +1,17 @@
+// === ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ===
+let tgUsername = "Фабрикант"; // Имя по умолчанию, если открыли не в ТГ
+if (window.Telegram && window.Telegram.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready(); // Сообщаем Телеграму, что мини-апп полностью загрузился
+    tg.expand(); // Автоматически раскрываем игру на весь экран телефона
+    
+    // Пытаемся достать username (@никнейм) или имя с фамилией пользователя
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+        tgUsername = user.username || `${user.first_name} ${user.last_name || ''}`.trim();
+    }
+}
+
 const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
 const ppsValueEl = document.getElementById('pps-value');
@@ -23,7 +37,7 @@ const ADS_COOLDOWN_TIME = 60000; // Перезарядка ТВ: 3 минуты 
 let AdController = null;
 
 if (window.Adsgram) {
-    // Если библиотека успешно скачалась, привязываем тестовый ID "1"
+    // Если библиотека успешно скачалась
     AdController = window.Adsgram.init({ blockId: "36308" });
     console.log("Adsgram SDK успешно инициализировано!");
 } else {
@@ -834,21 +848,27 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         item.classList.remove('dragging');
         const touchDuration = Date.now() - touchStartTime;
         
-        // МОБИЛЬНЫЙ ТАП ПО КАРТОЧКЕ — Включаем clickSound и считаем КРИТ
+        // МОБИЛЬНЫЙ ТАП ПО КАРТОЧКЕ — Включаем clickSound, считаем КРИТ и х2 буст
         if (touchDuration < 250 && !isMoving) {
             const cardValue = Number(item.getAttribute('data-value'));
             
+            // Проверяем, активен ли Золотой Век прямо сейчас
+            const isGoldAge = doubleIncomeUntil > Date.now();
+            // Базовое золото за клик (удваивается, если буст тикает)
+            const baseClickValue = isGoldAge ? cardValue * 2 : cardValue;
+            
             // Расчет критического удара
-            const critChance = (upgrades.crit ? upgrades.crit.level : 0) * 5; // Например, 3 ур * 5 = 15%
+            const critChance = (upgrades.crit ? upgrades.crit.level : 0) * 5; 
             const isCritHit = (Math.random() * 100) < critChance;
             
             if (isCritHit) {
-                const critValue = cardValue * 10;
+                // Если выпал КРИТ, умножаем уже увеличенное бустом базовое золото на 10!
+                const critValue = baseClickValue * 10;
                 updateBalance(critValue);
                 spawnFloatingText(`+${formatNumber(critValue)} $`, item.style.left, item.style.top, false, true);
             } else {
-                updateBalance(cardValue);
-                spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+                updateBalance(baseClickValue);
+                spawnFloatingText(`+${formatNumber(baseClickValue)} $`, item.style.left, item.style.top);
             }
             
             clickSound.currentTime = 0;
@@ -894,17 +914,21 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         setTimeout(() => { item.classList.remove('click-anim'); }, 150);
         const cardValue = Number(item.getAttribute('data-value'));
         
+        // Проверяем, активен ли Золотой Век для ПК
+        const isGoldAge = doubleIncomeUntil > Date.now();
+        const baseClickValue = isGoldAge ? cardValue * 2 : cardValue;
+        
         // Расчет критического удара для ПК
         const critChance = (upgrades.crit ? upgrades.crit.level : 0) * 5;
         const isCritHit = (Math.random() * 100) < critChance;
         
         if (isCritHit) {
-            const critValue = cardValue * 10;
+            const critValue = baseClickValue * 10;
             updateBalance(critValue);
             spawnFloatingText(`+${formatNumber(critValue)} $`, item.style.left, item.style.top, false, true);
         } else {
-            updateBalance(cardValue);
-            spawnFloatingText(`+${formatNumber(cardValue)} $`, item.style.left, item.style.top);
+            updateBalance(baseClickValue);
+            spawnFloatingText(`+${formatNumber(baseClickValue)} $`, item.style.left, item.style.top);
         }
         
         // КЛИК НА ПК — Включаем clickSound
@@ -914,6 +938,7 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
         calculatePPS(); 
         saveGame(); 
     });
+
 
     item.addEventListener('dragstart', (e) => {
         item.classList.add('dragging');
@@ -1195,7 +1220,6 @@ function renderCollectionGrid() {
     });
 }
 
-
 // Функция открытия детального поповера с твоим описанием
 function openCardDetails(value) {
     const cardData = CARDS_DATABASE[value];
@@ -1222,6 +1246,57 @@ function openCardDetails(value) {
         // Открываем поповер поверх коллекции
         detailsPopup.showPopover();
     }
+}
+
+// Функция отрисовки таблицы лидеров на экране
+function renderLeaderboard() {
+    const container = document.getElementById('leaderboard-list-container');
+    if (!container) return;
+
+    // Очищаем старые строчки
+    container.innerHTML = '';
+
+    // Имитируем список лидеров (твоё имя + баланс будут живыми, а остальные — для теста)
+    // Когда мы сделаем сервер, этот массив будет прилетать из интернета!
+    const fakeLeaderboardData = [
+        { name: `${tgUsername} (Вы)`, score: balance, isMe: true },
+        { name: "Брат_Разработчик", score: 500000, isMe: false },
+        { name: "Крипто_Хомяк", score: 25000, isMe: false },
+        { name: "Дуров_На_Связи", score: 1500, isMe: false }
+    ];
+
+    // Сортируем игроков строго по балансу от большего к меньшему
+    fakeLeaderboardData.sort((a, b) => b.score - a.score);
+
+    // Массив красивых медалек для топ-3
+    const medals = ["🥇", "🥈", "🥉"];
+
+    fakeLeaderboardData.forEach((player, index) => {
+        const row = document.createElement('div');
+        // Если это строчка текущего игрока, вешаем класс user-row для золотой подсветки
+        row.className = 'leaderboard-row' + (player.isMe ? ' user-row' : '');
+
+        // Определяем, медалька у игрока или просто цифра места (4, 5...)
+        const placeIcon = index < 3 ? medals[index] : `${index + 1}`;
+
+        row.innerHTML = `
+            <span class="leader-place">${placeIcon}</span>
+            <span class="leader-name">${player.name}</span>
+            <span class="leader-score">${formatNumber(player.score)} $</span>
+        `;
+        
+        container.appendChild(row);
+    });
+}
+
+// Привязываем автоматическое обновление топа строго при ОТКРЫТИИ поповера
+const leaderboardPopupEl = document.getElementById('leaderboard-popup');
+if (leaderboardPopupEl) {
+    leaderboardPopupEl.addEventListener('beforetoggle', (event) => {
+        if (event.newState === 'open') {
+            renderLeaderboard();
+        }
+    });
 }
 
 // Связываем открытие поповера коллекции с автоматической перерисовкой сетки

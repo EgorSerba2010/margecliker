@@ -23,7 +23,6 @@
             <!-- Правая часть: колонка с алмазами сверху и часами снизу -->
             <div class="right-bar-column">
                 <div class="diamonds-counter" title="Ваши алмазы">💎 <span id="diamonds-value">0</span></div>
-                
                 <div class="timer-container" title="До появления новой карточки">
                     <svg class="progress-ring" width="50" height="50">
                         <circle class="progress-ring__background" stroke="#e0e0e0" stroke-width="4" fill="transparent" r="20" cx="25" cy="25"/>
@@ -32,6 +31,13 @@
                     <span class="timer-icon">⏳</span>
                 </div>
             </div>
+        </div>
+
+        <!-- НОВАЯ КНОПКА РЕЙТИНГА МЕЖДУ БАЛАНСОМ И ПОЛЕМ -->
+        <div class="leaderboard-container-row">
+            <button id="leaderboard-anchor" popovertarget="leaderboard-popup">
+                🏆 Лидерборд
+            </button>
         </div>
         
         <!-- Переключатель игровых полей (вкладок) -->
@@ -241,12 +247,31 @@
             </div>
         </div>
 
+        <!-- ОКНО ТАБЛИЦЫ ЛИДЕРОВ (ПОПОВЕР) -->
+        <div class="shop-container" id="leaderboard-popup" popover>
+            <h2 class="shop-main-title">ТОП ФАБРИКАНТОВ</h2>
+            <p class="unlock-subtitle" style="margin-bottom: 15px;">Лучшие игроки по балансу денег:</p>
+            
+            <!-- Сюда JavaScript будет вставлять строки лидеров -->
+            <div class="leaderboard-list" id="leaderboard-list-container">
+                <!-- Тестовые заглушки, пока нет сервера -->
+                <div class="leaderboard-row user-row">
+                    <span class="leader-place">🥇</span>
+                    <span class="leader-name">Вы (Загрузка...)</span>
+                    <span class="leader-score">100 $</span>
+                </div>
+            </div>
+            
+            <button class="unlock-close-btn" onclick="document.getElementById('leaderboard-popup').hidePopover()" style="margin-top: 15px; background-color: #95a5a6; box-shadow: 0 4px 10px rgba(149, 165, 166, 0.3);">ЗАКРЫТЬ</button>
+        </div>
+
         <!-- Нижняя панель разработчика -->
         <div class="footer-panel">
             <button class="reset-btn" onclick="hardResetGame()">⚙️ Сбросить весь прогресс</button>
         </div>
     </div>
     
+    <script src="https://telegram.org"></script>
     <script src="//sad.adsgram.ai/js/sad.min.js"></script>
     <script src="main.js" defer></script>
 </body>
