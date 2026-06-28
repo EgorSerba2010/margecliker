@@ -217,14 +217,21 @@
             <button class="unlock-close-btn" onclick="document.getElementById('unlock-popup').hidePopover()">ОТЛИЧНО!</button>
         </div>
 
-        <!-- Окно оффлайн дохода -->
+        <!-- Обновленное окно оффлайн дохода (ПОПОВЕР) -->
         <div class="unlock-popup-container" id="offline-popup" popover>
             <h2 class="unlock-title shiny-text">С ВОЗВРАЩЕНИЕМ!</h2>
-            <p class="unlock-subtitle" id="offline-time-text">Вас не было in игре: 0 сек</p>
+            <p class="unlock-subtitle" id="offline-time-text">Вас не было в игре: 0 сек</p>
             <div class="offline-gold-icon">💰</div>
             <p class="offline-reward-text">Вы заработали пассивно:</p>
             <h3 class="offline-reward-value">+<span id="offline-reward-value">0</span> $</h3>
-            <button class="unlock-close-btn" onclick="document.getElementById('offline-popup').hidePopover()">ЗАБРАТЬ НАГРАДУ!</button>
+            
+            <!-- НОВЫЙ РЯД КНОПОК ДЛЯ ВЫБОРА НАГРАДЫ -->
+            <div class="offline-btns-row">
+                <!-- Яркая золотая кнопка удвоения за просмотр рекламы -->
+                <button class="offline-double-btn" onclick="claimDoubleOfflineReward()">📺 УДВОИТЬ!</button>
+                <!-- Скромная серая кнопка просто забрать базовую сумму -->
+                <button class="offline-claim-btn" onclick="claimNormalOfflineReward()">ПРОСТО ЗАБРАТЬ</button>
+            </div>
         </div>
 
         <!-- ОКНО КОЛЛЕКЦИИ (ПОПОВЕР) -->

@@ -1183,3 +1183,56 @@ body {
     border-color: #f1c40f;
     box-shadow: 0 2px 6px rgba(241, 196, 15, 0.15);
 }
+
+/* === СТИЛИ ДЛЯ КНОПОК ОФФЛАЙН ДОХОДА === */
+
+/* Контейнер для размещения кнопок в один ряд */
+.offline-btns-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 5px;
+    box-sizing: border-box;
+}
+
+/* Общий базовый стиль для обеих кнопок */
+.offline-claim-btn, .offline-double-btn {
+    flex: 1; /* Кнопки делят пространство ровно пополам */
+    padding: 14px 10px;
+    font-size: 13px;
+    font-weight: 900;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+/* Стиль обычной серой кнопки */
+.offline-claim-btn {
+    background-color: #95a5a6;
+    color: white;
+    box-shadow: 0 4px 10px rgba(149, 165, 166, 0.2);
+    font-size: 10px;
+}
+.offline-claim-btn:hover { background-color: #7f8c8d; }
+.offline-claim-btn:active { transform: scale(0.96); }
+
+/* Стиль премиальной золотой кнопки удвоения */
+.offline-double-btn {
+    background: linear-gradient(135deg, #f1c40f, #e67e22);
+    color: white;
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+    border: 1px solid #d35400;
+}
+.offline-double-btn:hover { background: linear-gradient(135deg, #f39c12, #d35400); }
+.offline-double-btn:active { transform: scale(0.96); }
+
+/* Небольшая адаптация для мобильных, чтобы текст не вылезал */
+@media (max-width: 620px) {
+    .offline-claim-btn, .offline-double-btn {
+        font-size: 11px;
+        padding: 12px 5px;
+    }
+}
