@@ -1151,20 +1151,81 @@ function autoSpawn() {
 
 function buyCard(value) {
     const currentPrice = prices[value];
-    if (balance >= currentPrice) {
+    if (balance < currentPrice) return;
+
+    // Проверяем, какому полю принадлежит покупаемая карта
+    const targetField = getFieldForValue(value);
+
+    if (targetField === currentField) {
+        // Ситуация А: Карта покупается для ТЕКУЩЕГО поля. Создаем как обычно на экране.
         const success = createCard(value);
         if (success) {
             updateBalance(-currentPrice);
             prices[value] = Math.round(currentPrice * 1.15);
             document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
             
-            // УСПЕШНАЯ ПОКУПКА КАРТЫ — Включаем buySound
             buySound.currentTime = 0;
             buySound.play().catch(err => console.log(err));
 
             checkShopButtons();
             saveGame(); 
         }
+    } else {
+        // Ситуация Б: Карта покупается для СКРЫТОГО поля! Пишем напрямую в базу данных.
+        
+        // 1. Вытаскиваем текущую базу данных полей из памяти
+        let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+        const savedData = localStorage.getItem('clicker_game_save');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+            } catch(e) {}
+        }
+
+        // Прямо перед созданием проверяем глобальный лимит карт на том скрытом поле
+        const targetFieldKey = `field_${targetField}`;
+        if (allFieldsCards[targetFieldKey].length >= MAX_CARDS) {
+            alert(`На Поле ${targetField} нет свободного места для покупки!`);
+            return;
+        }
+
+        // 2. Списываем деньги и увеличиваем цену товара в магазине
+        updateBalance(-currentPrice);
+        prices[value] = Math.round(currentPrice * 1.15);
+        document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
+
+        // 3. Добавляем новую карту в массив скрытого поля со случайными координатами
+        allFieldsCards[targetFieldKey].push({
+            value: value,
+            left: `${getRandomPercent(5, 75)}%`,
+            top: `${getRandomPercent(5, 80)}%`
+        });
+
+        // 4. Фиксируем открытие карты, если игрок купил её впервые
+        checkCardUnlocks(value);
+
+        // 5. Пересобираем и сохраняем глобальный стейт игры
+        const gameState = { 
+            balance: balance, 
+            diamonds: diamonds,
+            prices: prices, 
+            upgrades: upgrades,
+            cardsByFields: allFieldsCards,
+            currentField: currentField,
+            unlockedItems: unlockedItems,
+            discoveredCards: discoveredCards,
+            lastSaveTime: Date.now(),
+            lastAdWatchTime: lastAdWatchTime
+        };
+        localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
+
+        // Включаем звук успешной покупки
+        buySound.currentTime = 0;
+        buySound.play().catch(err => console.log(err));
+
+        calculatePPS(); // Доход обновится, так как он считает и скрытые карты
+        checkShopButtons();
     }
 }
 
