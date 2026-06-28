@@ -863,6 +863,7 @@ body {
     border: #e67e22 solid 3px; /* Красивый оранжевый ободок книжки */
     display: flex;
     justify-content: center;
+    align-items: center;
     transition: transform 0.1s;
     flex-shrink: 0; /* Чтобы кнопка не сжималась на узких экранах */
     box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.2);
