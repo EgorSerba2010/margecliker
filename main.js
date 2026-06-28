@@ -1,34 +1,36 @@
 // === ФИНАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ===
 let tgUsername = "Фабрикант_" + Math.floor(1000 + Math.random() * 9000); // Базовая уникальная заглушка для тестов в браузере
+setTimeout(() => {
 
-if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
-    try {
-        tg.ready();    // Сигнализируем ТГ о готовности приложения
-        tg.expand();   // Разворачиваем игру на максимум вверх
-    } catch (e) {
-        console.error("Ошибка инициализации интерфейса Telegram SDK:", e);
-    }
-    
-    // Вытаскиваем данные пользователя
-    const user = tg.initDataUnsafe?.user;
-    
-    if (user) {
-        console.log("Данные пользователя Telegram успешно получены:", user);
-        
-        // Каскадная проверка: берем лучшее, что доступно в профиле
-        if (user.username) {
-            tgUsername = "@" + user.username; // Идеальный вариант (например, @Ivan_Crypto)
-        } else if (user.first_name) {
-            // Если скрыт @username, склеиваем Имя и Фамилию
-            tgUsername = `${user.first_name} ${user.last_name || ''}`.trim();
-        } else if (user.id) {
-            tgUsername = "ID_" + user.id; // Крайний случай, если профиль полностью скрыт настройками приватности
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        try {
+            tg.ready();    // Сигнализируем ТГ о готовности приложения
+            tg.expand();   // Разворачиваем игру на максимум вверх
+        } catch (e) {
+            console.error("Ошибка инициализации интерфейса Telegram SDK:", e);
         }
-    } else {
-        alert("Игра запущена в обычном браузере. Включен тестовый режим.");
-    }
-} else alert('бла бла бла блэ блэ блэ блу блу блу бэ бубубубубубу');
+        
+        // Вытаскиваем данные пользователя
+        const user = tg.initDataUnsafe?.user;
+        
+        if (user) {
+            console.log("Данные пользователя Telegram успешно получены:", user);
+            
+            // Каскадная проверка: берем лучшее, что доступно в профиле
+            if (user.username) {
+                tgUsername = "@" + user.username; // Идеальный вариант (например, @Ivan_Crypto)
+            } else if (user.first_name) {
+                // Если скрыт @username, склеиваем Имя и Фамилию
+                tgUsername = `${user.first_name} ${user.last_name || ''}`.trim();
+            } else if (user.id) {
+                tgUsername = "ID_" + user.id; // Крайний случай, если профиль полностью скрыт настройками приватности
+            }
+        } else {
+            alert("Игра запущена в обычном браузере. Включен тестовый режим.");
+        }
+    } else alert('бла бла бла блэ блэ блэ блу блу блу бэ бубубубубубу');
+}, 300);
 
 const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
