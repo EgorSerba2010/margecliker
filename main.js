@@ -85,20 +85,20 @@ const CARDS_DATABASE = {
         desc: "Nothing, just an inchident on the race."
     },
     256: {
-        name: "Акула бизнеса",
-        desc: "Видит тренды насквозь. Может продать воздух и завернуть его в красивую обертку."
+        name: "Я уже красный",
+        desc: "Культурно не получится."
     },
     512: {
-        name: "Техно-гений",
-        desc: "Создал искусственный интеллект, который сам кликает по карточкам за него."
+        name: "Большая лысина",
+        desc: "То, что есть у мальчиков, но нет у девочек."
     },
     1024: {
-        name: "Владелец корпорации",
-        desc: "Его подпись стоит на миллиардных контрактах. Почти прошел Поле 2."
+        name: "Бутчер",
+        desc: "Excuse me, sir."
     },
     2048: {
-        name: "Повелитель Экономики",
-        desc: "Легендарная карта второго цеха. Открывает врата в высшую лигу."
+        name: "Молния Маквин",
+        desc: "Кчау, люблю маму."
     },
     4096: {
         name: "Император Галактики",
@@ -125,7 +125,7 @@ let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
     tier: { level: 0, price: 5, maxLevel: 5 },
     speed: { level: 0, price: 1, maxLevel: 7 },
-    crit: { level: 0, price: 1, maxLevel: 20 }
+    crit: { level: 0, price: 2, maxLevel: 20 }
 };
 
 let unlockedItems = [1, 2, 4];
@@ -1263,7 +1263,7 @@ function renderCollectionGrid() {
         else if (index === 6) {
             const header = document.createElement('div');
             header.className = 'collection-stage-title';
-            header.textContent = "ПОЛЕ 2 • КРИПТО-ЭРА";
+            header.textContent = "ПОЛЕ 2 • ПРОДВИНУТЫЙ УРОВЕНЬ";
             gridContainer.appendChild(header);
         }
         // Перед тринадцатой карточкой (индекс 12) вставляем заголовок третьего поля
