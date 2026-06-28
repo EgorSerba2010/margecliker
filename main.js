@@ -1248,45 +1248,58 @@ function openCardDetails(value) {
     }
 }
 
-// Функция отрисовки таблицы лидеров на экране
-function renderLeaderboard() {
+// НАСТОЯЩИЙ ИНТЕРНЕТ-АДРЕС ТВОЕГО СЕРВЕРА (Замени на свой адрес от Render!)
+const SERVER_URL = "https://server-ae7b.onrender.com"; 
+
+async function renderLeaderboard() {
     const container = document.getElementById('leaderboard-list-container');
     if (!container) return;
 
-    // Очищаем старые строчки
-    container.innerHTML = '';
+    // Временно пишем "Загрузка...", пока ждем ответ от сервера по сети
+    container.innerHTML = '<div style="text-align:center; color:#7f8c8d; font-size:14px; padding:10px;">Связь с сервером...</div>';
 
-    // Имитируем список лидеров (твоё имя + баланс будут живыми, а остальные — для теста)
-    // Когда мы сделаем сервер, этот массив будет прилетать из интернета!
-    const fakeLeaderboardData = [
-        { name: `${tgUsername} (Вы)`, score: balance, isMe: true },
-        { name: "Брат_Разработчик", score: 500000, isMe: false },
-        { name: "Крипто_Хомяк", score: 25000, isMe: false },
-        { name: "Дуров_На_Связи", score: 1500, isMe: false }
-    ];
+    try {
+        // Отправляем пакет с твоим именем и балансом на сервер через POST-запрос
+        const response = await fetch(`${SERVER_URL}/api/score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: tgUsername,
+                score: balance
+            })
+        });
 
-    // Сортируем игроков строго по балансу от большего к меньшему
-    fakeLeaderboardData.sort((a, b) => b.score - a.score);
-
-    // Массив красивых медалек для топ-3
-    const medals = ["🥇", "🥈", "🥉"];
-
-    fakeLeaderboardData.forEach((player, index) => {
-        const row = document.createElement('div');
-        // Если это строчка текущего игрока, вешаем класс user-row для золотой подсветки
-        row.className = 'leaderboard-row' + (player.isMe ? ' user-row' : '');
-
-        // Определяем, медалька у игрока или просто цифра места (4, 5...)
-        const placeIcon = index < 3 ? medals[index] : `${index + 1}`;
-
-        row.innerHTML = `
-            <span class="leader-place">${placeIcon}</span>
-            <span class="leader-name">${player.name}</span>
-            <span class="leader-score">${formatNumber(player.score)} $</span>
-        `;
+        if (!response.ok) throw new Error('Ошибка сервера');
         
-        container.appendChild(row);
-    });
+        const data = await response.json();
+        const serverLeaderboard = data.leaderboard || [];
+
+        // Очищаем контейнер для вывода настоящих строк
+        container.innerHTML = '';
+        const medals = ["🥇", "🥈", "🥉"];
+
+        serverLeaderboard.forEach((player, index) => {
+            const row = document.createElement('div');
+            
+            // Проверяем, совпадает ли имя из топа с твоим текущим ником в ТГ
+            const isItMe = player.name === tgUsername;
+            row.className = 'leaderboard-row' + (isItMe ? ' user-row' : '');
+
+            const placeIcon = index < 3 ? medals[index] : `${index + 1}`;
+
+            row.innerHTML = `
+                <span class="leader-place">${placeIcon}</span>
+                <span class="leader-name">${player.name} ${isItMe ? '(Вы)' : ''}</span>
+                <span class="leader-score">${formatNumber(player.score)} $</span>
+            `;
+            
+            container.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("Не удалось загрузить онлайн-топ:", error);
+        container.innerHTML = '<div style="text-align:center; color:#c0392b; font-size:14px; padding:10px;">❌ Ошибка сети. Сервер спит или выключен.</div>';
+    }
 }
 
 // Привязываем автоматическое обновление топа строго при ОТКРЫТИИ поповера
