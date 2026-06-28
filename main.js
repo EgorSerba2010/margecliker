@@ -1,36 +1,24 @@
-// === ФИНАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ===
-let tgUsername = "Фабрикант_" + Math.floor(1000 + Math.random() * 9000); // Базовая уникальная заглушка для тестов в браузере
-setTimeout(() => {
+// === ЧИСТАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ===
+let tgUsername = "Фабрикант_" + Math.floor(1000 + Math.random() * 9000); // Базовая заглушка с цифрами для ПК
 
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        try {
-            tg.ready();    // Сигнализируем ТГ о готовности приложения
-            tg.expand();   // Разворачиваем игру на максимум вверх
-        } catch (e) {
-            console.error("Ошибка инициализации интерфейса Telegram SDK:", e);
-        }
-        
-        // Вытаскиваем данные пользователя
-        const user = tg.initDataUnsafe?.user;
-        
-        if (user) {
-            console.log("Данные пользователя Telegram успешно получены:", user);
-            
-            // Каскадная проверка: берем лучшее, что доступно в профиле
-            if (user.username) {
-                tgUsername = "@" + user.username; // Идеальный вариант (например, @Ivan_Crypto)
-            } else if (user.first_name) {
-                // Если скрыт @username, склеиваем Имя и Фамилию
-                tgUsername = `${user.first_name} ${user.last_name || ''}`.trim();
-            } else if (user.id) {
-                tgUsername = "ID_" + user.id; // Крайний случай, если профиль полностью скрыт настройками приватности
-            }
+if (window.Telegram && window.Telegram.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // Проверяем, передал ли Telegram профиль игрока
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+        if (user.username) {
+            tgUsername = "@" + user.username;
         } else {
-            alert("Игра запущена в обычном браузере. Включен тестовый режим.");
+            tgUsername = `${user.first_name} ${user.last_name || ''}`.trim();
         }
-    } else alert('бла бла бла блэ блэ блэ блу блу блу бэ бубубубубубу');
-}, 300);
+    }
+}
+
+// МГНОВЕННЫЙ ДЕБАГ-ТЕСТ: Проверяем, какое имя определилось СРАЗУ при старте
+alert("ПРОВЕРКА СВЯЗИ С ТГ:\n\nИмя игрока: " + tgUsername);
 
 const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
