@@ -28,7 +28,7 @@ if (window.Telegram && window.Telegram.WebApp) {
     } else {
         alert("Игра запущена в обычном браузере. Включен тестовый режим.");
     }
-} else alert('бла бла бла блэ блэ блэ блу блу блу бэ бубубу');
+} else alert('бла бла бла блэ блэ блэ блу блу блу бэ бубубубубубу');
 
 const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
