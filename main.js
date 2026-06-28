@@ -1326,11 +1326,9 @@ async function renderLeaderboard() {
     const container = document.getElementById('leaderboard-list-container');
     if (!container) return;
 
-    // Временно пишем "Загрузка...", пока ждем ответ от сервера по сети
     container.innerHTML = '<div style="text-align:center; color:#7f8c8d; font-size:14px; padding:10px;">Связь с сервером...</div>';
 
     try {
-        // Отправляем пакет с твоим именем и балансом на сервер через POST-запрос
         const response = await fetch(`${SERVER_URL}/api/score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1345,14 +1343,18 @@ async function renderLeaderboard() {
         const data = await response.json();
         const serverLeaderboard = data.leaderboard || [];
 
-        // Очищаем контейнер для вывода настоящих строк
         container.innerHTML = '';
         const medals = ["🥇", "🥈", "🥉"];
 
+        // 1. Сначала находим, на каком строгом месте находится текущий игрок во всей базе
+        const myActualIndex = serverLeaderboard.findIndex(p => p.name === tgUsername);
+        const isInTop10 = myActualIndex >= 0 && myActualIndex < 10;
+
+        // 2. Отрисовываем только ТОП-10 игроков
         serverLeaderboard.forEach((player, index) => {
+            if (index >= 10) return; // Пропускаем всех, кто ниже 10 места
+
             const row = document.createElement('div');
-            
-            // Проверяем, совпадает ли имя из топа с твоим текущим ником в ТГ
             const isItMe = player.name === tgUsername;
             row.className = 'leaderboard-row' + (isItMe ? ' user-row' : '');
 
@@ -1363,13 +1365,37 @@ async function renderLeaderboard() {
                 <span class="leader-name">${player.name} ${isItMe ? '(Вы)' : ''}</span>
                 <span class="leader-score">${formatNumber(player.score)} $</span>
             `;
-            
             container.appendChild(row);
         });
 
+        // 3. ЕСЛИ ТЕБЯ НЕТ В ТОП-10 — ПРИРИСОВЫВАЕМ ТЕБЯ СНИЗУ ОТДЕЛЬНОЙ СТРОКОЙ!
+        if (!isInTop10 && myActualIndex !== -1) {
+            // Создаем красивую пунктирную линию разделения
+            const divider = document.createElement('div');
+            divider.style.textAlign = 'center';
+            divider.style.color = '#94a3b8';
+            divider.style.fontSize = '11px';
+            divider.style.margin = '8px 0';
+            divider.style.letterSpacing = '2px';
+            divider.textContent = '• • • • • • • • •';
+            container.appendChild(divider);
+
+            // Создаем персональную строчку игрока под ТОП-10
+            const myPlayer = serverLeaderboard[myActualIndex];
+            const myRow = document.createElement('div');
+            myRow.className = 'leaderboard-row user-row'; // Золотая плашка
+
+            myRow.innerHTML = `
+                <span class="leader-place" style="font-size:13px; color:#7f8c8d;">#${myActualIndex + 1}</span>
+                <span class="leader-name">${myPlayer.name} (Вы)</span>
+                <span class="leader-score">${formatNumber(myPlayer.score)} $</span>
+            `;
+            container.appendChild(myRow);
+        }
+
     } catch (error) {
         console.error("Не удалось загрузить онлайн-топ:", error);
-        container.innerHTML = '<div style="text-align:center; color:#c0392b; font-size:14px; padding:10px;">❌ Ошибка сети. Сервер спит или выключен.</div>';
+        container.innerHTML = `<div style="text-align:center; color:#c0392b; font-size:12px; padding:10px;">❌ Ошибка сети.<br>${error.message}</div>`;
     }
 }
 
