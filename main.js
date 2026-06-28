@@ -1,24 +1,20 @@
-// === ЧИСТАЯ ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ===
-let tgUsername = "Фабрикант_" + Math.floor(1000 + Math.random() * 9000); // Базовая заглушка с цифрами для ПК
+// === УМНАЯ СИСТЕМА ИДЕНТИФИКАЦИИ ИГРОКА (ЛОКАЛЬНАЯ) ===
+let tgUsername = localStorage.getItem('saved_player_username');
 
-if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-
-    // Проверяем, передал ли Telegram профиль игрока
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-        if (user.username) {
-            tgUsername = "@" + user.username;
-        } else {
-            tgUsername = `${user.first_name} ${user.last_name || ''}`.trim();
-        }
+// Если игрок зашел в игру впервые и имени в памяти телефона еще нет
+if (!tgUsername) {
+    let userChoice = prompt("👋 Добро пожаловать на Фабрику!\n\nВведите ваш никнейм для таблицы лидеров:");
+    
+    // Если игрок нажал "Отмена" или ввел пробелы — даем уникальное имя с цифрами
+    if (!userChoice || userChoice.trim() === "") {
+        tgUsername = "Фабрикант_" + Math.floor(1000 + Math.random() * 9000);
+    } else {
+        tgUsername = userChoice.trim();
     }
+    
+    // Запоминаем выбор в память смартфона намертво
+    localStorage.setItem('saved_player_username', tgUsername);
 }
-
-// МГНОВЕННЫЙ ДЕБАГ-ТЕСТ: Проверяем, какое имя определилось СРАЗУ при старте
-alert("ПРОВЕРКА СВЯЗИ С ТГ:\n\nИмя игрока: " + tgUsername);
 
 const sandbox = document.getElementById('sandbox');
 const balanceValueEl = document.getElementById('balance-value');
@@ -475,8 +471,17 @@ function loadGame() {
 
 
 function hardResetGame() {
-    if (confirm("Вы уверены, что хотите полностью обнулить игру и удалить сохранение?")) {
-        localStorage.removeItem('clicker_game_save');
+    if (confirm("Вы уверены, что хотите полностью обнулить игру и удалить сохранение? (Ваш никнейм сохранится)")) {
+        // Запоминаем текущий ник перед очисткой памяти
+        const currentName = localStorage.getItem('saved_player_username');
+        
+        localStorage.clear(); // Стираем баланс, карточки и цены
+        
+        // Возвращаем ник обратно в память
+        if (currentName) {
+            localStorage.setItem('saved_player_username', currentName);
+        }
+        
         location.reload();
     }
 }
