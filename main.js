@@ -1137,7 +1137,7 @@ function switchField(fieldNumber) {
     sandbox.innerHTML = '';
 
     // Перезагружаем игру из памяти, чтобы loadGame отрисовал только карты для нового поля
-    loadGame();
+    setTimeout(() => {loadGame();}, 20);
 }
 
 function autoSpawn() {
