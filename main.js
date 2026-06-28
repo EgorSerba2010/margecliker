@@ -1185,10 +1185,7 @@ function buyCard(value) {
 
         // Прямо перед созданием проверяем глобальный лимит карт на том скрытом поле
         const targetFieldKey = `field_${targetField}`;
-        if (allFieldsCards[targetFieldKey].length >= MAX_CARDS) {
-            alert(`На Поле ${targetField} нет свободного места для покупки!`);
-            return;
-        }
+        if (allFieldsCards[targetFieldKey].length >= MAX_CARDS) return;
 
         // 2. Списываем деньги и увеличиваем цену товара в магазине
         updateBalance(-currentPrice);
