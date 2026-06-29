@@ -1254,7 +1254,7 @@ function switchField(fieldNumber) {
 
 function autoSpawn() {
     // === ШАНС 1% НА СПАВН ТЕНЕВОГО КЕЙСА ===
-    if (Math.random() < 0.9) {
+    if (Math.random() < 0.02) {
         // Создаем секретную карту строго на текущем поле игрока
         createCard('secret');
         saveGame();
@@ -1634,58 +1634,93 @@ if (collectionPopupEl) {
     });
 }
 
-// Функция вскрытия теневого кейса за просмотр ТВ
+// ФИНАЛЬНАЯ ВЕРСИЯ ВСКРЫТИЯ КЕЙСА С ВЕРНУТОЙ РЕКЛАМОЙ И АВТОПЕРЕНОСОМ
 function claimSecretCardReward() {
     if (!AdController) {
-        alert("Реклама временно недоступна. Попробуйте позже.");
+        alert("Реклама временно недоступна. Попробуйте вскрыть кейс чуть позже.");
         return;
     }
 
-    // Мгновенно прячем поповер кейса, чтобы освободить экран для плеера Telegram
+    // Мгновенно скрываем поповер, чтобы очистить экран для видеоплеера Telegram
     const popup = document.getElementById('secret-card-popup');
     if (popup) popup.hidePopover();
 
+    // Запускаем официальный ролик
     AdController.show().then((result) => {
-        lastAdWatchTime = Date.now();
+        // РЕКЛАМА ДОСМОТРЕНА ДО КОНЦА!
+        lastAdWatchTime = Date.now(); // Обновляем время для кулдауна ТВ-кнопки
         
         buySound.currentTime = 0;
         buySound.play().catch(err => console.log(err));
 
         // --- УМНЫЙ РАСЧЕТ 4 ПРЕД-ТОПОВЫХ КАРТ ---
-        // 1. Собираем список всех номиналов в игре строго по порядку
         const globalNominals = Object.keys(CARDS_DATABASE).map(Number).sort((a, b) => a - b);
-        
-        // 2. Находим самый большой номинал, который игрок уже успел открыть за всё время
         const maxDiscovered = Math.max(...discoveredCards, 1);
         const maxIndex = globalNominals.indexOf(maxDiscovered);
 
-        let finalRewardValue = 1; // Номинал карты, которую мы в итоге подарим
+        let finalRewardValue = 1;
 
-        // 3. Если у игрока открыто уже много карт (хотя бы выше "8")
         if (maxIndex >= 4) {
-            // Берем срез из 4 карт, идущих ПЕРЕД максимальной открытой
-            // Например, если максимум 1024, пулом станут: [64, 128, 256, 512]
             const luckyPool = globalNominals.slice(maxIndex - 4, maxIndex);
-            
-            // Выбираем из этих четырех одну случайную карту
             finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
         } else {
-            // Защита для новичков: если карт открыто мало, даем случайную из того, что есть
             const luckyPool = globalNominals.slice(0, Math.max(maxIndex, 1));
             finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
         }
 
-        // 4. Спавним выигранную карту прямо на текущее поле игрока
-        createCard(finalRewardValue);
-        checkCardUnlocks(finalRewardValue); // Фиксируем, если вдруг случилось чудо и открылась новая
+        const targetField = getFieldForValue(finalRewardValue);
 
-        // Красивое праздничное уведомление
-        spawnFloatingText(`🎁 ПОЛУЧЕНА КАРТА ${formatNumber(finalRewardValue)}!`, "50%", "50%");
-        saveGame();
+        if (targetField === currentField) {
+            // СИТУАЦИЯ А: Спавним на текущем поле вживую
+            createCard(finalRewardValue);
+            checkCardUnlocks(finalRewardValue); 
+            spawnFloatingText(`🎁 ПОЛУЧЕНА КАРТА ${formatNumber(finalRewardValue)}!`, "50%", "50%");
+            saveGame();
+        } else {
+            // СИТУАЦИЯ Б: Карта для скрытого поля, пишем напрямую в localStorage
+            let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+            const savedData = localStorage.getItem('clicker_game_save');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+                } catch(e) {}
+            }
+
+            const targetFieldKey = `field_${targetField}`;
+            if (allFieldsCards[targetFieldKey].length < MAX_CARDS) {
+                allFieldsCards[targetFieldKey].push({
+                    value: finalRewardValue,
+                    left: `${getRandomPercent(5, 75)}%`,
+                    top: `${getRandomPercent(5, 80)}%`
+                });
+            }
+
+            checkCardUnlocks(finalRewardValue);
+
+            const gameState = { 
+                balance: balance, 
+                diamonds: diamonds,
+                prices: prices, 
+                upgrades: upgrades,
+                cardsByFields: allFieldsCards,
+                currentField: currentField,
+                unlockedItems: unlockedItems,
+                discoveredCards: discoveredCards,
+                lastSaveTime: Date.now(),
+                lastAdWatchTime: lastAdWatchTime
+            };
+            localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
+
+            calculatePPS();
+            alert(`🎁 Карта ${formatNumber(finalRewardValue)} успешно отправлена на Поле ${targetField}!`);
+        }
 
     }).catch((result) => {
-        console.log("Вскрытие отменено: реклама не досмотрена.", result);
-        // Если закрыл рекламу — возвращаем кейс на экран
+        // Игрок закрыл видео до конца — награду не даем
+        console.log("Вскрытие теневого кейса отменено: реклама пропущена.", result);
+        
+        // Возвращаем окно кейса обратно на экран, давая второй шанс
         if (popup) popup.showPopover();
     });
 }
