@@ -103,6 +103,26 @@ const CARDS_DATABASE = {
     4096: {
         name: "Император Галактики",
         desc: "Основатель Поля 3. Его богатство невозможно измерить обычными цифрами."
+    },
+    8192: {
+        name: "Большая лысина",
+        desc: "То, что есть у мальчиков, но нет у девочек."
+    },
+    16384: {
+        name: "Бутчер",
+        desc: "Excuse me, sir."
+    },
+    32768: {
+        name: "Молния Маквин",
+        desc: "Кчау, люблю маму."
+    },
+    65536: {
+        name: "Император Галактики",
+        desc: "Основатель Поля 3. Его богатство невозможно измерить обычными цифрами."
+    },
+    131072: {
+        name: "Император Галактики",
+        desc: "Основатель Поля 3. Его богатство невозможно измерить обычными цифрами."
     }
 };
 
@@ -188,6 +208,11 @@ function checkCardUnlocks(value) {
     if (value === 1024) targetToUnlock = 128;
     if (value === 2048) targetToUnlock = 256;
     if (value === 4096) targetToUnlock = 512;
+    if (value === 8192) targetToUnlock = 1024;
+    if (value === 16384) targetToUnlock = 2048;
+    if (value === 32768) targetToUnlock = 4096;
+    if (value === 65536) targetToUnlock = 8192;
+    if (value === 131072) targetToUnlock = 16384;
 
     if (targetToUnlock > 0 && !unlockedItems.includes(targetToUnlock)) {
         unlockedItems.push(targetToUnlock);
@@ -1303,7 +1328,6 @@ function buyCard(value) {
 function renderCollectionGrid() {
     const gridContainer = document.getElementById('collection-grid-container');
     if (!gridContainer) return;
-
     // Полностью очищаем сетку перед созданием
     gridContainer.innerHTML = '';
 

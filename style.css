@@ -330,6 +330,11 @@ body {
 .val-1024 { background-color: #00bbf9; background-image: url(1024.png); }
 .val-2048 { background-color: #00f5d4; background-image: url(2048.png); }
 .val-4096 { background-color: #435682; background-image: url(4096.png); }
+.val-8192 { background-color: #43825b; background-image: url(8192.png); }
+.val-16384 { background-color: #7d4382; background-image: url(16384.png); }
+.val-32768 { background-color: #65e00d; background-image: url(32768.png); }
+.val-65536 { background-color: #e3c011; background-image: url(65536.png); }
+.val-131072 { background-color: #111111; background-image: url(131072.png); }
 .val-high { background-color: #d62828; background-image: url(.png); }
 
 /* Общие правила для всех карточек, чтобы картинка идеально ложилась внутрь */
