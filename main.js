@@ -123,7 +123,7 @@ let prices = {
 // Фиксированные цены по твоей задумке (без инфляции) + лимиты уровней
 let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
-    tier: { level: 0, price: 5, maxLevel: 5 },
+    tier: { level: 0, price: 5, maxLevel: 3 },
     speed: { level: 0, price: 1, maxLevel: 7 },
     crit: { level: 0, price: 2, maxLevel: 20 }
 };
@@ -1164,10 +1164,61 @@ function switchField(fieldNumber) {
 
 function autoSpawn() {
     const value = getRandomSpawnValue();
-    const success = createCard(value);
-    if (success) {
+    const targetField = getFieldForValue(value);
+
+    if (targetField === currentField) {
+        // Ситуация А: Карта спавнится на ТОМ ЖЕ поле, где сейчас находится игрок.
+        // Отрисовываем её вживую на экране.
+        const success = createCard(value);
+        if (success) {
+            checkCardUnlocks(value);
+            saveGame(); 
+        }
+    } else {
+        // Ситуация Б: Карта родилась на ДРУГОМ (скрытом в данный момент) поле!
+        // Записываем её напрямую в базу данных этого поля в памяти телефона.
+        
+        // 1. Вытаскиваем текущую базу данных всех полей из памяти
+        let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+        const savedData = localStorage.getItem('clicker_game_save');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+            } catch(e) {}
+        }
+
+        const targetFieldKey = `field_${targetField}`;
+        
+        // Проверяем лимит места на том скрытом поле, чтобы не переполнять его в фоне
+        if (allFieldsCards[targetFieldKey].length >= MAX_CARDS) return;
+
+        // 2. Добавляем карточку в массив скрытого поля со случайными координатами
+        allFieldsCards[targetFieldKey].push({
+            value: value,
+            left: `${getRandomPercent(5, 75)}%`,
+            top: `${getRandomPercent(5, 80)}%`
+        });
+
+        // 3. Фиксируем открытие карты, если она выпала впервые
         checkCardUnlocks(value);
-        saveGame(); 
+
+        // 4. Пересобираем и сохраняем глобальный стейт игры
+        const gameState = { 
+            balance: balance, 
+            diamonds: diamonds,
+            prices: prices, 
+            upgrades: upgrades,
+            cardsByFields: allFieldsCards,
+            currentField: currentField,
+            unlockedItems: unlockedItems,
+            discoveredCards: discoveredCards,
+            lastSaveTime: Date.now(),
+            lastAdWatchTime: lastAdWatchTime
+        };
+        localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
+
+        calculatePPS(); // Пересчитываем доход в секунду (он учтет и фоновую карту)
     }
 }
 
