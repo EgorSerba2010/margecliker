@@ -143,10 +143,12 @@ let prices = {
 // Фиксированные цены по твоей задумке (без инфляции) + лимиты уровней
 let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
-    tier: { level: 0, price: 5, maxLevel: 3 },
+    tier: { level: 0, price: 5, maxLevel: 5 },
     speed: { level: 0, price: 1, maxLevel: 7 },
-    crit: { level: 0, price: 2, maxLevel: 20 }
+    crit: { level: 0, price: 1, maxLevel: 20 },
+    autoIncomeSpeed: { level: 0, price: 2, maxLevel: 7 }
 };
+
 
 let unlockedItems = [1, 2, 4];
 let discoveredCards = [1, 2, 4]; 
@@ -288,6 +290,11 @@ function checkUpgradeButtons() {
         btnCrit.disabled = upgrades.crit.level >= upgrades.crit.maxLevel || diamonds < upgrades.crit.price;
     }
 
+    const btnAutoIncSpeed = document.getElementById('buy-boost-income-speed-btn');
+    if (btnAutoIncSpeed) {
+        btnAutoIncSpeed.disabled = upgrades.autoIncomeSpeed.level >= upgrades.autoIncomeSpeed.maxLevel || diamonds < upgrades.autoIncomeSpeed.price;
+    }
+
 }
 
 function updateUpgradeUI() {
@@ -335,6 +342,18 @@ function updateUpgradeUI() {
         }
     }
 
+    // Интерфейс для буста "Быстрые транзакции"
+    const autoIncSpeedLvlEl = document.getElementById('boost-income-speed-lvl');
+    const autoIncSpeedPriceEl = document.getElementById('price-boost-income-speed');
+    if (autoIncSpeedLvlEl) autoIncSpeedLvlEl.textContent = upgrades.autoIncomeSpeed.level;
+    if (autoIncSpeedPriceEl) {
+        if (upgrades.autoIncomeSpeed.level >= upgrades.autoIncomeSpeed.maxLevel) {
+            autoIncSpeedPriceEl.parentNode.innerHTML = "MAX";
+        } else {
+            autoIncSpeedPriceEl.textContent = upgrades.autoIncomeSpeed.price;
+        }
+    }
+
     checkUpgradeButtons();
 }
 
@@ -374,8 +393,9 @@ function saveGame() {
 
     const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
     activeCards.forEach(card => {
+        const isSecret = card.getAttribute('data-secret') === 'true';
         allFieldsCards[currentFieldKey].push({
-            value: Number(card.getAttribute('data-value')),
+            value: isSecret ? 0 : Number(card.getAttribute('data-value')),
             left: card.style.left,
             top: card.style.top
         });
@@ -413,6 +433,7 @@ function loadGame() {
                 if (gameState.upgrades.tier) upgrades.tier.level = gameState.upgrades.tier.level;
                 if (gameState.upgrades.speed) upgrades.speed.level = gameState.upgrades.speed.level;
                 if (gameState.upgrades.crit) upgrades.crit.level = gameState.upgrades.crit.level;
+                if (gameState.upgrades.autoIncomeSpeed) upgrades.autoIncomeSpeed.level = gameState.upgrades.autoIncomeSpeed.level;
             }
             updateUpgradeUI();
 
@@ -504,7 +525,6 @@ function loadGame() {
     }
     return false; 
 }
-
 
 function hardResetGame() {
     if (confirm("Вы уверены, что хотите полностью обнулить игру и удалить сохранение? (Ваш никнейм сохранится)")) {
@@ -655,13 +675,14 @@ if (balanceBoardElement) {
                 localStorage.removeItem('clicker_game_save');
                 const freshState = {
                     balance: 20000000,
-                    diamonds: 10,
+                    diamonds: 20,
                     prices: { 1: 10, 2: 50, 4: 200, 8: 1000, 16: 5000, 32: 20000, 64: 100000, 128: 500000, 256: 2000000, 512: 10000000 },
                     upgrades: { 
                         offline: { level: 0, price: 2, maxLevel: 18 },
                         tier: { level: 0, price: 5, maxLevel: 5 },
                         speed: { level: 0, price: 1, maxLevel: 7 },
-                        crit: { level: 0, price: 1, maxLevel: 20 }
+                        crit: { level: 0, price: 1, maxLevel: 20 },
+                        autoIncomeSpeed: { level: 0, price: 2, maxLevel: 7 }
                     },
                     cards: [
                         { value: 4, left: "20%", top: "30%" },
@@ -835,6 +856,50 @@ function createCard(value, customLeft = null, customTop = null, playSpawnAnim = 
     if (currentCardsCount >= MAX_CARDS) return false; 
 
     const item = document.createElement('div');
+
+        // === ИСПРАВЛЕННАЯ ПРОВЕРКА НА СЕКРЕТНУЮ КАРТУ ===
+    if (value === 'secret' || value === 0) {
+        item.className = 'drag-item secret-card';
+        item.textContent = '?'; 
+        
+        // Правильно подставляем координаты и при спавне, и при загрузке из сохранения
+        item.style.left = customLeft || `${getRandomPercent(10, 80)}%`;
+        item.style.top = customTop || `${getRandomPercent(10, 75)}%`;
+        
+        // Жёстко ставим цифровой ноль в data-value, чтобы collectPassiveIncome не выдавал NaN!
+        item.setAttribute('data-value', 0);
+        // Вешаем скрытый маркер, чтобы saveGame() понимал, что это секретный кейс
+        item.setAttribute('data-secret', 'true');
+        item.setAttribute('data-field', currentField);
+
+        // Привязываем клик (код удаления и вызова поповера)
+        item.addEventListener('click', () => {
+            item.classList.add('absorb-anim');
+            setTimeout(() => {
+                item.remove();
+                calculatePPS();
+                saveGame();
+                
+                const popup = document.getElementById('secret-card-popup');
+                if (popup) popup.showPopover();
+            }, 200);
+        });
+
+        // Мобильный тап
+        let secretTouchStart = 0;
+        item.addEventListener('touchstart', () => { secretTouchStart = Date.now(); });
+        item.addEventListener('touchend', () => {
+            if (Date.now() - secretTouchStart < 250) {
+                item.click();
+            }
+        });
+
+        sandbox.appendChild(item);
+        calculatePPS();
+        return true;
+    }
+    // === КОНЕЦ ПРОВЕРКИ ===
+
     item.id = `item-${cardCounter++}`;
     item.className = 'drag-item drop-zone';
     item.setAttribute('draggable', 'true');
@@ -1188,12 +1253,19 @@ function switchField(fieldNumber) {
 }
 
 function autoSpawn() {
+    // === ШАНС 1% НА СПАВН ТЕНЕВОГО КЕЙСА ===
+    if (Math.random() < 0.9) {
+        // Создаем секретную карту строго на текущем поле игрока
+        createCard('secret');
+        saveGame();
+        return;
+    }
+
     const value = getRandomSpawnValue();
     const targetField = getFieldForValue(value);
 
     if (targetField === currentField) {
         // Ситуация А: Карта спавнится на ТОМ ЖЕ поле, где сейчас находится игрок.
-        // Отрисовываем её вживую на экране.
         const success = createCard(value);
         if (success) {
             checkCardUnlocks(value);
@@ -1201,8 +1273,6 @@ function autoSpawn() {
         }
     } else {
         // Ситуация Б: Карта родилась на ДРУГОМ (скрытом в данный момент) поле!
-        // Записываем её напрямую в базу данных этого поля в памяти телефона.
-        
         // 1. Вытаскиваем текущую базу данных всех полей из памяти
         let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
         const savedData = localStorage.getItem('clicker_game_save');
@@ -1247,13 +1317,25 @@ function autoSpawn() {
     }
 }
 
+// Функция умного динамического сбора пассивного дохода
+function runDynamicPassiveIncomeLoop() {
+    collectPassiveIncome();
+
+    // Считаем интервал на основе нового ключа autoIncomeSpeed
+    const speedBonus = (upgrades.autoIncomeSpeed ? upgrades.autoIncomeSpeed.level : 0) * 500;
+    const currentInterval = Math.max(PASSIVE_INCOME_INTERVAL - speedBonus, 500); // Ограничение: не быстрее 0.5 сек
+
+    // Планируем следующий сбор денег
+    setTimeout(runDynamicPassiveIncomeLoop, currentInterval);
+}
+
 function buyCard(value) {
     const currentPrice = prices[value];
     if (balance < currentPrice) return;
-
+    
     // Проверяем, какому полю принадлежит покупаемая карта
     const targetField = getFieldForValue(value);
-
+    
     if (targetField === currentField) {
         // Ситуация А: Карта покупается для ТЕКУЩЕГО поля. Создаем как обычно на экране.
         const success = createCard(value);
@@ -1264,7 +1346,7 @@ function buyCard(value) {
             
             buySound.currentTime = 0;
             buySound.play().catch(err => console.log(err));
-
+            
             checkShopButtons();
             saveGame(); 
         }
@@ -1280,16 +1362,16 @@ function buyCard(value) {
                 if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
             } catch(e) {}
         }
-
+        
         // Прямо перед созданием проверяем глобальный лимит карт на том скрытом поле
         const targetFieldKey = `field_${targetField}`;
         if (allFieldsCards[targetFieldKey].length >= MAX_CARDS) return;
-
+        
         // 2. Списываем деньги и увеличиваем цену товара в магазине
         updateBalance(-currentPrice);
         prices[value] = Math.round(currentPrice * 1.15);
         document.getElementById(`price-${value}`).textContent = formatNumber(prices[value]);
-
+        
         // 3. Добавляем новую карту в массив скрытого поля со случайными координатами
         allFieldsCards[targetFieldKey].push({
             value: value,
@@ -1299,7 +1381,7 @@ function buyCard(value) {
 
         // 4. Фиксируем открытие карты, если игрок купил её впервые
         checkCardUnlocks(value);
-
+        
         // 5. Пересобираем и сохраняем глобальный стейт игры
         const gameState = { 
             balance: balance, 
@@ -1314,11 +1396,11 @@ function buyCard(value) {
             lastAdWatchTime: lastAdWatchTime
         };
         localStorage.setItem('clicker_game_save', JSON.stringify(gameState));
-
+        
         // Включаем звук успешной покупки
         buySound.currentTime = 0;
         buySound.play().catch(err => console.log(err));
-
+        
         calculatePPS(); // Доход обновится, так как он считает и скрытые карты
         checkShopButtons();
     }
@@ -1330,10 +1412,10 @@ function renderCollectionGrid() {
     if (!gridContainer) return;
     // Полностью очищаем сетку перед созданием
     gridContainer.innerHTML = '';
-
+    
     // Берем все номиналы строго по порядку из нашей базы данных
     const allNominals = Object.keys(CARDS_DATABASE).map(Number).sort((a, b) => a - b);
-
+    
     allNominals.forEach((value, index) => {
         // === ВИЗУАЛЬНОЕ РАЗДЕЛЕНИЕ ПО 6 КАРТОЧЕК ===
         // Перед самой первой карточкой (индекс 0) вставляем заголовок первого поля
@@ -1361,16 +1443,16 @@ function renderCollectionGrid() {
         // Создаем сам слот для карточки (этот код у тебя уже был)
         const slot = document.createElement('div');
         slot.className = 'collection-slot';
-
+        
         const isDiscovered = discoveredCards.includes(value);
-
+        
         if (isDiscovered) {
             slot.classList.add(`val-${value}`);
             slot.onclick = () => openCardDetails(value);
         } else {
             slot.classList.add('locked-card');
         }
-
+        
         gridContainer.appendChild(slot);
     });
 }
@@ -1379,13 +1461,13 @@ function renderCollectionGrid() {
 function openCardDetails(value) {
     const cardData = CARDS_DATABASE[value];
     if (!cardData) return;
-
+    
     const detailsPopup = document.getElementById('card-details-popup');
     const detailsName = document.getElementById('details-card-name');
     const detailsValue = document.getElementById('details-card-value');
     const detailsImage = document.getElementById('details-card-image');
     const detailsDesc = document.getElementById('details-card-desc');
-
+    
     if (detailsPopup && detailsName && detailsValue && detailsImage && detailsDesc) {
         // Подставляем название и номинал
         detailsName.textContent = cardData.name.toUpperCase();
@@ -1397,7 +1479,7 @@ function openCardDetails(value) {
         // Красим блок превью в класс нашей карточки, чтобы там отобразилась нужная картинка
         detailsImage.className = 'drag-item-preview'; // сброс старых классов
         updateCardColorClass(detailsImage, value);
-
+        
         // Открываем поповер поверх коллекции
         detailsPopup.showPopover();
     }
@@ -1418,13 +1500,14 @@ function claimNormalOfflineReward() {
 // Функция Б: Удвоенное получение награды за просмотр ТВ рекламы (х2)
 function claimDoubleOfflineReward() {
     if (currentOfflineEarningsBuffer <= 0) return;
-
+    
     // Проверяем, инициализировано ли рекламное SDK Adsgram
     if (!AdController) {
         alert("Реклама временно недоступна. Заберите обычную награду.");
         return;
     }
-
+    document.getElementById('offline-popup').hidePopover();
+    
     // Запускаем реальный видеоролик
     AdController.show().then((result) => {
         // РЕКЛАМА ДОСМОТРЕНА ДО КОНЦА! 
@@ -1433,14 +1516,14 @@ function claimDoubleOfflineReward() {
         // Включаем звук успешной покупки/награды
         buySound.currentTime = 0;
         buySound.play().catch(err => console.log(err));
-
+        
         // Удваиваем сумму из буфера
         const doubleReward = currentOfflineEarningsBuffer * 2;
         updateBalance(doubleReward);
         
         // Праздничный всплывающий текст
         spawnFloatingText(`УДВОЕНО! +${formatNumber(doubleReward)} $`, "50%", "50%");
-
+        
         // Очищаем буфер и закрываем поповер оффлайн дохода
         currentOfflineEarningsBuffer = 0;
         saveGame();
@@ -1456,9 +1539,9 @@ const SERVER_URL = "https://server-ae7b.onrender.com";
 async function renderLeaderboard() {
     const container = document.getElementById('leaderboard-list-container');
     if (!container) return;
-
+    
     container.innerHTML = '<div style="text-align:center; color:#7f8c8d; font-size:14px; padding:10px;">Связь с сервером...</div>';
-
+    
     try {
         const response = await fetch(`${SERVER_URL}/api/score`, {
             method: 'POST',
@@ -1468,62 +1551,62 @@ async function renderLeaderboard() {
                 score: balance
             })
         });
-
+        
         if (!response.ok) throw new Error('Ошибка сервера');
         
         const data = await response.json();
         const serverLeaderboard = data.leaderboard || [];
-
+        
         container.innerHTML = '';
         const medals = ["🥇", "🥈", "🥉"];
-
+        
         // 1. Сначала находим, на каком строгом месте находится текущий игрок во всей базе
         const myActualIndex = serverLeaderboard.findIndex(p => p.name === tgUsername);
         const isInTop10 = myActualIndex >= 0 && myActualIndex < 10;
-
+        
         // 2. Отрисовываем только ТОП-10 игроков
         serverLeaderboard.forEach((player, index) => {
             if (index >= 10) return; // Пропускаем всех, кто ниже 10 места
-
+            
             const row = document.createElement('div');
             const isItMe = player.name === tgUsername;
             row.className = 'leaderboard-row' + (isItMe ? ' user-row' : '');
-
+            
             const placeIcon = index < 3 ? medals[index] : `${index + 1}`;
-
+            
             row.innerHTML = `
                 <span class="leader-place">${placeIcon}</span>
                 <span class="leader-name">${player.name} ${isItMe ? '(Вы)' : ''}</span>
                 <span class="leader-score">${formatNumber(player.score)} $</span>
-            `;
-            container.appendChild(row);
-        });
-
-        // 3. ЕСЛИ ТЕБЯ НЕТ В ТОП-10 — ПРИРИСОВЫВАЕМ ТЕБЯ СНИЗУ ОТДЕЛЬНОЙ СТРОКОЙ!
-        if (!isInTop10 && myActualIndex !== -1) {
-            // Создаем красивую пунктирную линию разделения
-            const divider = document.createElement('div');
-            divider.style.textAlign = 'center';
-            divider.style.color = '#94a3b8';
-            divider.style.fontSize = '11px';
-            divider.style.margin = '8px 0';
+                `;
+                container.appendChild(row);
+            });
+            
+            // 3. ЕСЛИ ТЕБЯ НЕТ В ТОП-10 — ПРИРИСОВЫВАЕМ ТЕБЯ СНИЗУ ОТДЕЛЬНОЙ СТРОКОЙ!
+            if (!isInTop10 && myActualIndex !== -1) {
+                // Создаем красивую пунктирную линию разделения
+                const divider = document.createElement('div');
+                divider.style.textAlign = 'center';
+                divider.style.color = '#94a3b8';
+                divider.style.fontSize = '11px';
+                divider.style.margin = '8px 0';
             divider.style.letterSpacing = '2px';
             divider.textContent = '• • • • • • • • •';
             container.appendChild(divider);
-
+            
             // Создаем персональную строчку игрока под ТОП-10
             const myPlayer = serverLeaderboard[myActualIndex];
             const myRow = document.createElement('div');
             myRow.className = 'leaderboard-row user-row'; // Золотая плашка
-
+            
             myRow.innerHTML = `
-                <span class="leader-place" style="font-size:13px; color:#7f8c8d;">#${myActualIndex + 1}</span>
-                <span class="leader-name">${myPlayer.name} (Вы)</span>
-                <span class="leader-score">${formatNumber(myPlayer.score)} $</span>
+            <span class="leader-place" style="font-size:13px; color:#7f8c8d;">#${myActualIndex + 1}</span>
+            <span class="leader-name">${myPlayer.name} (Вы)</span>
+            <span class="leader-score">${formatNumber(myPlayer.score)} $</span>
             `;
             container.appendChild(myRow);
         }
-
+        
     } catch (error) {
         console.error("Не удалось загрузить онлайн-топ:", error);
         container.innerHTML = `<div style="text-align:center; color:#c0392b; font-size:12px; padding:10px;">❌ Ошибка сети.<br>${error.message}</div>`;
@@ -1551,12 +1634,68 @@ if (collectionPopupEl) {
     });
 }
 
+// Функция вскрытия теневого кейса за просмотр ТВ
+function claimSecretCardReward() {
+    if (!AdController) {
+        alert("Реклама временно недоступна. Попробуйте позже.");
+        return;
+    }
+
+    // Мгновенно прячем поповер кейса, чтобы освободить экран для плеера Telegram
+    const popup = document.getElementById('secret-card-popup');
+    if (popup) popup.hidePopover();
+
+    AdController.show().then((result) => {
+        lastAdWatchTime = Date.now();
+        
+        buySound.currentTime = 0;
+        buySound.play().catch(err => console.log(err));
+
+        // --- УМНЫЙ РАСЧЕТ 4 ПРЕД-ТОПОВЫХ КАРТ ---
+        // 1. Собираем список всех номиналов в игре строго по порядку
+        const globalNominals = Object.keys(CARDS_DATABASE).map(Number).sort((a, b) => a - b);
+        
+        // 2. Находим самый большой номинал, который игрок уже успел открыть за всё время
+        const maxDiscovered = Math.max(...discoveredCards, 1);
+        const maxIndex = globalNominals.indexOf(maxDiscovered);
+
+        let finalRewardValue = 1; // Номинал карты, которую мы в итоге подарим
+
+        // 3. Если у игрока открыто уже много карт (хотя бы выше "8")
+        if (maxIndex >= 4) {
+            // Берем срез из 4 карт, идущих ПЕРЕД максимальной открытой
+            // Например, если максимум 1024, пулом станут: [64, 128, 256, 512]
+            const luckyPool = globalNominals.slice(maxIndex - 4, maxIndex);
+            
+            // Выбираем из этих четырех одну случайную карту
+            finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
+        } else {
+            // Защита для новичков: если карт открыто мало, даем случайную из того, что есть
+            const luckyPool = globalNominals.slice(0, Math.max(maxIndex, 1));
+            finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
+        }
+
+        // 4. Спавним выигранную карту прямо на текущее поле игрока
+        createCard(finalRewardValue);
+        checkCardUnlocks(finalRewardValue); // Фиксируем, если вдруг случилось чудо и открылась новая
+
+        // Красивое праздничное уведомление
+        spawnFloatingText(`🎁 ПОЛУЧЕНА КАРТА ${formatNumber(finalRewardValue)}!`, "50%", "50%");
+        saveGame();
+
+    }).catch((result) => {
+        console.log("Вскрытие отменено: реклама не досмотрена.", result);
+        // Если закрыл рекламу — возвращаем кейс на экран
+        if (popup) popup.showPopover();
+    });
+}
+
 sandbox.addEventListener('dragover', (e) => { e.preventDefault(); });
 sandbox.addEventListener('drop', (e) => {
     e.preventDefault();
     const draggedId = e.dataTransfer.getData('text/plain');
     const draggedElement = document.getElementById(draggedId);
-
+    
     if (draggedElement && !draggedElement.classList.contains('absorb-anim')) {
         const dragOffsetX = Number(e.dataTransfer.getData('offsetX'));
         const dragOffsetY = Number(e.dataTransfer.getData('offsetY'));
@@ -1564,15 +1703,15 @@ sandbox.addEventListener('drop', (e) => {
 
         let newLeft = e.clientX - containerRect.left - dragOffsetX;
         let newTop = e.clientY - containerRect.top - dragOffsetY;
-
+        
         const maxLeft = sandbox.clientWidth - draggedElement.offsetWidth;
         const maxTop = sandbox.clientHeight - draggedElement.offsetHeight;
-
+        
         if (newLeft < 0) newLeft = 0;
         if (newTop < 0) newTop = 0;
         if (newLeft > maxLeft) newLeft = maxLeft;
         if (newTop > maxTop) newTop = maxTop;
-
+        
         draggedElement.style.left = `${(newLeft / sandbox.clientWidth) * 100}%`;
         draggedElement.style.top = `${(newTop / sandbox.clientHeight) * 100}%`;
         
@@ -1596,5 +1735,20 @@ refreshShopVisibility();
 updateUpgradeUI();
 const loaded = loadGame();
 if (!loaded) autoSpawn();
+
 setInterval(updateTimerIndicator, timerStep);
-setInterval(collectPassiveIncome, PASSIVE_INCOME_INTERVAL);
+// Функция умного динамического сбора пассивного дохода
+function runDynamicPassiveIncomeLoop() {
+    collectPassiveIncome();
+
+    // Считаем интервал на основе нового ключа autoIncomeSpeed
+    const speedBonus = (upgrades.autoIncomeSpeed ? upgrades.autoIncomeSpeed.level : 0) * 500;
+    const currentInterval = Math.max(PASSIVE_INCOME_INTERVAL - speedBonus, 500); // Ограничение: не быстрее 0.5 сек
+
+    // Планируем следующий сбор денег
+    setTimeout(runDynamicPassiveIncomeLoop, currentInterval);
+}
+
+// Запускаем цикл при старте игры
+setTimeout(runDynamicPassiveIncomeLoop, PASSIVE_INCOME_INTERVAL);
+setTimeout(runDynamicPassiveIncomeLoop, PASSIVE_INCOME_INTERVAL);

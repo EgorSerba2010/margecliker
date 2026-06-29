@@ -199,6 +199,18 @@
                         <span id="price-boost-crit">1</span> 💎
                     </button>
                 </div>
+
+                <!-- Буст 5: Ускорение сбора автодохода -->
+                <div class="shop-item-row">
+                    <div class="upgrade-item-info">
+                        <span class="upgrade-name">Быстрые транзакции</span>
+                        <span class="upgrade-desc">Сбор автодохода: -0.5 сек</span>
+                        <span class="upgrade-level">Ур. <span id="boost-income-speed-lvl">0</span></span>
+                    </div>
+                    <button class="upgrade-btn" id="buy-boost-income-speed-btn" onclick="buyUpgrade('autoIncomeSpeed')">
+                        <span id="price-boost-income-speed">2</span> 💎
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -271,6 +283,27 @@
             </div>
             
             <button class="unlock-close-btn" onclick="document.getElementById('leaderboard-popup').hidePopover()" style="margin-top: 15px; background-color: #95a5a6; box-shadow: 0 4px 10px rgba(149, 165, 166, 0.3);">ЗАКРЫТЬ</button>
+        </div>
+
+        <!-- ОКНО СЕКРЕТНОЙ КАРТЫ (ПОПОВЕР) -->
+        <div class="shop-container" id="secret-card-popup" popover>
+            <h2 class="shop-main-title" style="color: #9b59b6; text-shadow: 0 0 10px rgba(155, 89, 182, 0.3);">ТЕНЕВОЙ КЕЙС</h2>
+            <p class="unlock-subtitle" style="margin-bottom: 15px;">Узнай, что скрывается внутри!</p>
+            
+            <!-- Анимированная иконка кейса -->
+            <div class="secret-box-visual">?</div>
+            
+            <p style="font-size: 13px; color: #555; margin: 10px 0 20px 0; line-height: 1.5; padding: 0 10px;">
+                Отсюда были убраны все слабые карты. Внутри спрятан один из 5 твоих самых топовых открытых персонажей.
+            </p>
+            
+            <!-- Две кнопки в один ряд -->
+            <div class="offline-btns-row">
+                <button class="offline-claim-btn" onclick="document.getElementById('secret-card-popup').hidePopover()">ПРОПУСТИТЬ</button>
+                <button class="offline-double-btn" onclick="claimSecretCardReward()" style="background: linear-gradient(135deg, #9b59b6, #8e44ad); border-color: #713391; box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);">
+                    📺 ВСКРЫТЬ!
+                </button>
+            </div>
         </div>
 
         <!-- Нижняя панель разработчика -->

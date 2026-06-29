@@ -1241,3 +1241,94 @@ body {
         padding: 12px 5px;
     }
 }
+
+/* === СТИЛИ ДЛЯ СЕКРЕТНОЙ КАРТОЧКИ === */
+
+/* Уникальный класс для секретной карты на поле */
+.drag-item.secret-card {
+    background-color: #111111 !important; /* Глубокий черный цвет */
+    background-image: none !important;    /* Отменяем любые картинки */
+    border: 2px solid #9b59b6 !important;  /* Фиолетовая рамка */
+    color: #ffffff !important;             /* Белый цвет знака вопроса */
+    font-size: 32px !important;
+    font-weight: 900 !important;
+    text-shadow: 0 0 10px #fff;
+    /* Мощное неоновое свечение вокруг карты */
+    box-shadow: 0 0 15px rgba(155, 89, 182, 0.6), inset 0 0 10px rgba(155, 89, 182, 0.4) !important;
+    animation: neonPulseSecret 1s infinite alternate !important;
+    cursor: pointer;
+}
+
+/* Пульсация неонового свечения секретной карты */
+@keyframes neonPulseSecret {
+    0% {
+        box-shadow: 0 0 10px rgba(155, 89, 182, 0.5), inset 0 0 5px rgba(155, 89, 182, 0.3);
+        transform: scale(0.97);
+    }
+    100% {
+        box-shadow: 0 0 22px rgba(155, 89, 182, 0.9), inset 0 0 12px rgba(155, 89, 182, 0.6);
+        transform: scale(1.07); /* Карта слегка «дышит» на поле */
+    }
+}
+
+/* Большой знак вопроса в поповере кейса */
+.secret-box-visual {
+    width: 70px;
+    height: 70px;
+    background: #111111;
+    border: 3px solid #9b59b6;
+    border-radius: 16px;
+    color: #fff;
+    font-size: 38px;
+    font-weight: 900;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+    text-shadow: 0 0 8px #fff;
+    margin: 10px auto;
+    animation: floatSecretBox 2s infinite ease-in-out;
+}
+
+@keyframes floatSecretBox {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* Настройка анимации открытия для поповера секретной карты */
+#secret-card-popup {
+    opacity: 0;
+    gap: 15px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 24px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 340px;
+    box-sizing: border-box;
+    border: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transform: translateY(40px) scale(0.92);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2) allow-discrete;
+}
+
+#secret-card-popup:popover-open {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+#secret-card-popup::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+@starting-style {
+    #secret-card-popup:popover-open {
+        opacity: 0;
+        transform: translateY(40px) scale(0.92);
+    }
+}
