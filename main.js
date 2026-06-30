@@ -144,7 +144,7 @@ let prices = {
 let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
     tier: { level: 0, price: 5, maxLevel: 5 },
-    speed: { level: 0, price: 1, maxLevel: 7 },
+    speed: { level: 0, price: 2, maxLevel: 7 },
     crit: { level: 0, price: 1, maxLevel: 20 },
     autoIncomeSpeed: { level: 0, price: 2, maxLevel: 7 }
 };
@@ -543,6 +543,16 @@ function hardResetGame() {
 }
 
 function updateTimerIndicator() {
+    // Считаем, сколько карточек сейчас находится физически на открытом экране
+    const currentFieldCardsCount = document.querySelectorAll('.drag-item:not(.absorb-anim)').length;
+    if (currentFieldCardsCount >= MAX_CARDS) {
+        // Намертво фиксируем синее кольцо в состоянии полной заполненности (100%)
+        timerRing.style.strokeDashoffset = 0;
+        // Замораживаем счетчик времени, чтобы он не шел дальше лимита
+        timePassed = 0; 
+        return; // Мгновенно выходим из функции, останавливая весь таймер конвейера!
+    }
+
     timePassed += timerStep;
     const currentSpawnInterval = BASE_SPAWN_INTERVAL - (upgrades.speed.level * 1000);
     const progress = Math.min(timePassed / currentSpawnInterval, 1);
@@ -718,35 +728,55 @@ function spawnFloatingText(text, leftStyle, topStyle, isPassive = false, isCrit 
 }
 
 function calculatePPS() {
+    const ppsValueEl = document.getElementById('pps-value');
+    if (!ppsValueEl) return;
+
+    // 1. Рассчитываем базовую сумму пассивного дохода со всех карточек на всех полях
     let totalValue = 0;
-
-    // Считаем карточки на текущем экране
-    const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
-    activeCards.forEach(card => { totalValue += Number(card.getAttribute('data-value')); });
-
-    // Достаем из памяти карты остальных (скрытых) полей, чтобы учесть их доход
+    
+    // Собираем карты со всех трёх цехов в памяти смартфона
+    let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
     const savedData = localStorage.getItem('clicker_game_save');
     if (savedData) {
         try {
             const parsed = JSON.parse(savedData);
-            if (parsed.cardsByFields) {
-                Object.keys(parsed.cardsByFields).forEach(fieldKey => {
-                    // Пропускаем текущее поле, так как его карты мы уже посчитали выше вживую
-                    if (fieldKey !== `field_${currentField}`) {
-                        parsed.cardsByFields[fieldKey].forEach(c => totalValue += c.value);
-                    }
-                });
-            }
+            if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
         } catch(e) {}
     }
 
-    let pps = totalValue / (PASSIVE_INCOME_INTERVAL / 1000);
+    // Суммируем номиналы скрытых полей из сохранения
+    Object.keys(allFieldsCards).forEach(fieldKey => {
+        const currentFieldNum = Number(fieldKey.replace('field_', ''));
+        if (currentFieldNum !== currentField) {
+            allFieldsCards[fieldKey].forEach(card => {
+                totalValue += Number(card.value || 0);
+            });
+        }
+    });
 
-    // ЕСЛИ ЗОЛОТОЙ ВЕК АКТИВЕН — УМНОЖАЕМ ВЕСЬ ДОХОД В СЕКУНДУ НА 2!
-    if (doubleIncomeUntil > Date.now()) {
+    // Добавляем номиналы карточек, которые прямо сейчас физически находятся на открытом экране
+    const activeCards = document.querySelectorAll('.drag-item:not(.absorb-anim)');
+    activeCards.forEach(card => {
+        totalValue += Number(card.getAttribute('data-value') || 0);
+    });
+
+    // 2. ДИНАМИЧЕСКИЙ РАСЧЕТ ИНТЕРВАЛА СБОРА С УЧЕТОМ БУСТА "БЫСТРЫЕ ТРАНЗАКЦИИ"
+    // Считаем, сколько миллисекунд длится один такт сбора (4000мс минус уровень * 500мс)
+    const speedBonus = (upgrades.autoIncomeSpeed ? upgrades.autoIncomeSpeed.level : 0) * 500;
+    const currentIntervalMs = Math.max(PASSIVE_INCOME_INTERVAL - speedBonus, 500); // Минимум 500мс
+    
+    // Переводим интервал в секунды (например, 2000мс превратится в 2 секунды)
+    const currentIntervalSec = currentIntervalMs / 1000;
+
+    // Делим общую сумму карт на секунды интервала, получая честный доход В СЕКУНДУ
+    let pps = totalValue / currentIntervalSec;
+
+    // 3. Учитываем х2 буст от "Золотого Века" (если он активен)
+    if (typeof doubleIncomeUntil !== 'undefined' && doubleIncomeUntil > Date.now()) {
         pps = pps * 2;
     }
 
+    // Выводим красивое округленное число под баланс
     ppsValueEl.textContent = formatNumber(Number(pps.toFixed(1)));
 }
 
@@ -815,7 +845,7 @@ function updateCardColorClass(cardElement, value) {
         .filter(c => !c.startsWith('val-'))
         .join(' ');
 
-    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16386, 32768, 65536, 131072];
+    const knownValues = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072];
     if (knownValues.includes(value)) {
         cardElement.classList.add(`val-${value}`);
     } else {
