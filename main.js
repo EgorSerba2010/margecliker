@@ -145,7 +145,7 @@ let upgrades = {
     offline: { level: 0, price: 2, maxLevel: 18 },
     tier: { level: 0, price: 5, maxLevel: 5 },
     speed: { level: 0, price: 2, maxLevel: 7 },
-    crit: { level: 0, price: 1, maxLevel: 20 },
+    crit: { level: 0, price: 2, maxLevel: 20 },
     autoIncomeSpeed: { level: 0, price: 2, maxLevel: 7 }
 };
 
@@ -543,14 +543,38 @@ function hardResetGame() {
 }
 
 function updateTimerIndicator() {
-    // Считаем, сколько карточек сейчас находится физически на открытом экране
-    const currentFieldCardsCount = document.querySelectorAll('.drag-item:not(.absorb-anim)').length;
-    if (currentFieldCardsCount >= MAX_CARDS) {
-        // Намертво фиксируем синее кольцо в состоянии полной заполненности (100%)
+    // === УМНАЯ СЕТЕВАЯ ПРОВЕРКА ЛИМИТА ПОЛЕЙ ===
+    // 1. Выясняем, какая карточка сейчас должна родиться из конвейера
+    const nextSpawnValue = getRandomSpawnValue();
+    // 2. Определяем, на какое именно поле эта карточка полетит
+    const targetFieldForNextSpawn = getFieldForValue(nextSpawnValue);
+
+    // 3. Считаем, сколько карт сейчас на целевом поле
+    let targetFieldCardsCount = 0;
+
+    if (targetFieldForNextSpawn === currentField) {
+        // Если поле открыто на экране — просто считаем карточки в HTML
+        targetFieldCardsCount = document.querySelectorAll('.drag-item:not(.absorb-anim)').length;
+    } else {
+        // Если поле скрыто — лезем в память localStorage и смотрим размер массива этого поля
+        let allFieldsCards = { field_1: [], field_2: [], field_3: [] };
+        const savedData = localStorage.getItem('clicker_game_save');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed.cardsByFields) allFieldsCards = parsed.cardsByFields;
+            } catch(e) {}
+        }
+        const targetFieldKey = `field_${targetFieldForNextSpawn}`;
+        targetFieldCardsCount = allFieldsCards[targetFieldKey] ? allFieldsCards[targetFieldKey].length : 0;
+    }
+
+    // 4. Если целевое поле для следующего спавна забито под завязку (MAX_CARDS)
+    if (targetFieldCardsCount >= MAX_CARDS) {
+        // Замораживаем кольцо на 100%
         timerRing.style.strokeDashoffset = 0;
-        // Замораживаем счетчик времени, чтобы он не шел дальше лимита
         timePassed = 0; 
-        return; // Мгновенно выходим из функции, останавливая весь таймер конвейера!
+        return; // Останавливаем конвейер, пока на целевом поле не освободится место!
     }
 
     timePassed += timerStep;
