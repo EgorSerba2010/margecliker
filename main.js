@@ -1715,8 +1715,7 @@ function claimSecretCardReward() {
         let finalRewardValue = 1;
 
         if (maxIndex >= 4) {
-            const luckyPool = globalNominals.slice(maxIndex - 4, maxIndex);
-            finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
+            finalRewardValue = globalNominals[maxIndex - 3];
         } else {
             const luckyPool = globalNominals.slice(0, Math.max(maxIndex, 1));
             finalRewardValue = luckyPool[Math.floor(Math.random() * luckyPool.length)];
